@@ -1,0 +1,15 @@
+{
+  "name": "unframe",
+  "version": "1.0.0",
+  "description": "Home assigment",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "lint": "eslint .",
+    "format": "prettier --write ."
+  },
+  "keywords": [],
+  "author": "Shachar Bogin",
+  "license": "ISC"
+}
