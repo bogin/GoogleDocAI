@@ -2,11 +2,17 @@ require('dotenv').config();
 const express = require('express');
 const routes = require('./routes/index');
 const GoogleService = require('./services/google.service');
+const cors = require('cors');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
+
+app.use(cors({
+  origin: 'http://localhost:8080'
+}));
+
 app.use('/', routes);
 
 
@@ -16,11 +22,7 @@ const errorHandler = (err, req, res, next) => {
 }
 
 app.use(errorHandler);
-const cors = require('cors')
 
-app.use(cors({
-  origin: 'http://localhost:8080' // Vue.js dev server
-}))
 
 async function startServer() {
   try {

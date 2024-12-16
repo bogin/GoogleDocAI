@@ -36,7 +36,7 @@ const actions = {
         params: {
           pageToken: page > 1 ? state.nextPageToken : undefined,
           pageSize: 10,
-          query: textQuery,
+          query: textQuery || "",
           modifiedAfter,
         },
       });
