@@ -13,3 +13,6 @@ build/
 *.swp
 *.swo
 .DS_Store
+
+.env
+tokens.json

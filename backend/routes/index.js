@@ -1,12 +1,10 @@
 const express = require('express');
-const filesController = require('../controllers/filesController');
+const authRoutes = require('./auth.routes');
+const filesRoutes = require('./files.routes');
 
 const router = express.Router();
 
-router.get('/files', filesController.listFiles);
-router.get('/files/:fileId', filesController.getFile);
-router.delete('/files/:fileId', filesController.deleteFile);
-router.patch('/files/:fileId', filesController.updateFile);
-
+router.use('/auth', authRoutes);
+router.use('/files', filesRoutes);
 
 module.exports = router;

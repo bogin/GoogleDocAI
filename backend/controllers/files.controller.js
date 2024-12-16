@@ -1,12 +1,11 @@
-const filesService = require('../services/filesService');
-const openaiService = require('../services/openaiService');
+const filesService = require('../services/files.service');
 
 class FilesController {
   async listFiles(req, res, next) {
     try {
       const { pageSize, pageToken, query, modifiedAfter } = req.query;
       const files = await filesService.listAllFiles({
-        pageSize: parseInt(pageSize),
+        pageSize,
         pageToken,
         query,
         modifiedAfter

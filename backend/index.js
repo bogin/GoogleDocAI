@@ -1,13 +1,13 @@
 require('dotenv').config();
 const express = require('express');
-const routes = require('./routes');
-const { initializeGoogleAuth } = require('./services/googleService');
+const routes = require('./routes/index');
+const GoogleService = require('./services/google.service');
 
 const app = express();
 const port = process.env.PORT || 3000;
 
 app.use(express.json());
-app.use('/api', routes);
+app.use('/', routes);
 
 
 const errorHandler = (err, req, res, next) => {
@@ -19,7 +19,7 @@ app.use(errorHandler);
 
 async function startServer() {
   try {
-    await initializeGoogleAuth();
+    await GoogleService.initializeGoogleAuth();
     app.listen(port, () => {
       console.log(`Server running on port ${port}`);
     });
