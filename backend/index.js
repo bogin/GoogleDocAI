@@ -16,6 +16,11 @@ const errorHandler = (err, req, res, next) => {
 }
 
 app.use(errorHandler);
+const cors = require('cors')
+
+app.use(cors({
+  origin: 'http://localhost:8080' // Vue.js dev server
+}))
 
 async function startServer() {
   try {
