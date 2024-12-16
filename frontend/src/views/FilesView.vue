@@ -1,73 +1,198 @@
 <template>
-  <div class="files">
-    <h2>Files Management</h2>
-    <div class="filters">
-      <TextFilter
-        v-model="filters.textQuery"
-        @update:modelValue="handleFiltersChange"
-      />
-      <DateFilter
-        v-model:startDate="filters.modifiedAfter"
-        @update:startDate="handleFiltersChange"
-      />
+  <div class="files-view">
+    <!-- Header Section -->
+    <div class="header">
+      <div class="title-section">
+        <h1>Files Management</h1>
+        <p class="subtitle">Manage and organize your Google Drive files</p>
+      </div>
+      <div class="actions">
+        <button class="sync-btn" @click="fetchFiles" :disabled="loading">
+          <span class="icon">🔄</span>
+          {{ loading ? "Syncing..." : "Sync Files" }}
+        </button>
+      </div>
     </div>
 
-    <FilesTable
-      :files="files"
-      :loading="loading"
-      @delete="handleDelete"
-      @edit="handleEdit"
-    />
+    <!-- Filters Section -->
+    <div class="filters-section">
+      <div class="filters-container">
+        <TextFilter
+          :model-value="filters.query"
+          @update:model-value="updateTextFilter"
+          placeholder="Search in files..."
+        />
+        <DateFilter
+          :model-value="filters.modifiedAfter"
+          @update:model-value="updateDateFilter"
+          placeholder="Modified After"
+        />
+      </div>
+
+      <div class="active-filters" v-if="hasActiveFilters">
+        <div class="filter-tag" v-if="filters.query">
+          Search: {{ filters.query }}
+          <button @click="clearTextFilter" class="clear-filter">×</button>
+        </div>
+        <div class="filter-tag" v-if="filters.modifiedAfter">
+          Modified after: {{ formatDate(filters.modifiedAfter) }}
+          <button @click="clearDateFilter" class="clear-filter">×</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Files Table Section -->
+    <div class="table-container" :class="{ loading }">
+      <FilesTable
+        :files="files"
+        :loading="loading"
+        @delete="handleDelete"
+        @edit="handleEdit"
+      />
+
+      <!-- Loading Overlay -->
+      <div v-if="loading" class="loading-overlay">
+        <div class="spinner"></div>
+        <span>Loading files...</span>
+      </div>
+
+      <!-- Empty State -->
+      <div v-if="!loading && files.length === 0" class="empty-state">
+        <span class="icon">📁</span>
+        <p>No files found</p>
+        <p class="subtitle" v-if="hasActiveFilters">
+          Try clearing your filters
+        </p>
+      </div>
+    </div>
+
+    <!-- Simple Pagination -->
+    <div class="pagination-section" v-if="files.length > 0">
+      <div class="pagination-info">Showing {{ files.length }} files</div>
+
+      <div class="pagination-controls">
+        <button class="page-btn" :disabled="!hasMore" @click="loadMore">
+          Load More
+        </button>
+      </div>
+
+      <div class="page-size-control">
+        <select
+          v-model="pageSize"
+          @change="handlePageSizeChange"
+          class="page-size-select"
+        >
+          <option :value="10">10 per page</option>
+          <option :value="25">25 per page</option>
+          <option :value="50">50 per page</option>
+        </select>
+      </div>
+    </div>
   </div>
 </template>
 
 <script lang="ts">
-import FilesTable from "@/components/FilesTable.vue";
-import DateFilter from "@/components/filters/DateFilter.vue";
-import TextFilter from "@/components/filters/TextFilter.vue";
 import { defineComponent, ref, computed, onMounted } from "vue";
 import { useStore } from "vuex";
-//   import TextSearchFilter from '@/components/files/filters/TextSearchFilter.vue'
-//   import DateRangeFilter from '@/components/files/filters/DateRangeFilter.vue'
-//   import FilesTable from '@/components/files/FilesTable.vue'
+import TextFilter from "@/components/filters/TextFilter.vue";
+import DateFilter from "@/components/filters/DateFilter.vue";
+import FilesTable from "@/components/FilesTable.vue";
 
 export default defineComponent({
   name: "FilesView",
-  components: {
-    TextFilter,
-    DateFilter,
-    FilesTable,
-  },
+  components: { TextFilter, DateFilter, FilesTable },
 
   setup() {
     const store = useStore();
-    const currentPage = ref(1);
+    const pageSize = ref(10);
     const filters = ref({
-      textQuery: "",
-      modifiedAfter: null,
+      query: "",
+      modifiedAfter: null as string | null,
     });
 
+    // Computed properties
     const files = computed(() => store.state.files.items);
     const loading = computed(() => store.state.files.loading);
+    const hasMore = computed(() => store.state.files.hasMore);
+    const nextPageToken = computed(() => store.state.files.nextPageToken);
+    const hasActiveFilters = computed(() =>
+      Boolean(filters.value.query || filters.value.modifiedAfter)
+    );
 
+    // Methods
     const fetchFiles = () => {
+      console.log("filters", filters.value);
       store.dispatch("files/fetchFiles", {
-        page: currentPage.value,
-        ...filters.value,
+        pageSize: pageSize.value,
+        filters: filters.value,
       });
     };
 
-    const handleFiltersChange = () => {
-      currentPage.value = 1;
+    const loadMore = () => {
+      if (!loading.value && hasMore.value) {
+        store.dispatch("files/fetchFiles", {
+          pageSize: pageSize.value,
+          loadMore: true,
+          filters: filters.value,
+          nextPageToken: nextPageToken.value,
+        });
+      }
+    };
+
+    const handlePageSizeChange = () => {
       fetchFiles();
     };
 
-    const handleDelete = () => {
-      console.log(`Delete`);
+    const updateTextFilter = (value: string) => {
+      filters.value.query = value;
+
+      fetchFiles();
     };
 
-    const handleEdit = () => {
-      console.log(`Edit`);
+    const updateDateFilter = (value: string | null) => {
+      filters.value.modifiedAfter = value;
+
+      fetchFiles();
+    };
+
+    const clearTextFilter = () => {
+      filters.value.query = "";
+
+      fetchFiles();
+    };
+
+    const clearDateFilter = () => {
+      filters.value.modifiedAfter = null;
+
+      fetchFiles();
+    };
+
+    const formatDate = (date: string | null) => {
+      return date ? new Date(date).toLocaleDateString() : "";
+    };
+
+    const handleDelete = async (fileId: string) => {
+      try {
+        await store.dispatch("files/deleteFile", fileId);
+        fetchFiles();
+      } catch (error) {
+        console.error("Failed to delete file:", error);
+      }
+    };
+
+    const handleEdit = async ({
+      fileId,
+      data,
+    }: {
+      fileId: string;
+      data: Partial<File>;
+    }) => {
+      try {
+        await store.dispatch("files/updateFile", { fileId, data });
+        fetchFiles();
+      } catch (error) {
+        console.error("Failed to update file:", error);
+      }
     };
 
     onMounted(fetchFiles);
@@ -75,8 +200,18 @@ export default defineComponent({
     return {
       files,
       loading,
+      hasMore,
       filters,
-      handleFiltersChange,
+      pageSize,
+      hasActiveFilters,
+      updateTextFilter,
+      updateDateFilter,
+      handlePageSizeChange,
+      clearTextFilter,
+      clearDateFilter,
+      formatDate,
+      fetchFiles,
+      loadMore,
       handleDelete,
       handleEdit,
     };
@@ -85,13 +220,251 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.files {
-  padding: 20px;
+.files-view {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+  background: #f8f9fa;
+  min-height: calc(100vh - 64px);
 
-  .filters {
-    margin: 20px 0;
+  .header {
     display: flex;
-    gap: 20px;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+
+    .title-section {
+      h1 {
+        font-size: 2rem;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+
+      .subtitle {
+        color: #4a5568;
+        font-size: 1rem;
+      }
+    }
+
+    .sync-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      font-size: 1rem;
+      font-weight: 500;
+      color: white;
+      background: #4299e1;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+
+      &:hover:not(:disabled) {
+        background: #3182ce;
+      }
+
+      &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+      }
+
+      &.loading .icon {
+        animation: spin 1s linear infinite;
+      }
+    }
+  }
+
+  .filters-section {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+
+    .filters-container {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .active-filters {
+      margin-top: 1rem;
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+
+      .filter-tag {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        background: #ebf8ff;
+        color: #2b6cb0;
+        border-radius: 20px;
+        font-size: 0.875rem;
+
+        .clear-filter {
+          background: none;
+          border: none;
+          color: #4a5568;
+          cursor: pointer;
+          padding: 2px 6px;
+          border-radius: 50%;
+
+          &:hover {
+            background: rgba(0, 0, 0, 0.1);
+            color: #e53e3e;
+          }
+        }
+      }
+    }
+  }
+
+  .table-container {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    min-height: 40vh;
+    max-height: 80vh;
+    overflow: hidden;
+
+    &.loading {
+      opacity: 0.7;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.9);
+      z-index: 10;
+
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #4299e1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #4a5568;
+
+      .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
+      }
+
+      p {
+        font-size: 1.125rem;
+        margin: 0;
+
+        &.subtitle {
+          font-size: 0.875rem;
+          color: #718096;
+          margin-top: 0.5rem;
+        }
+      }
+    }
+  }
+
+  .pagination-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    .pagination-controls {
+      .page-btn {
+        padding: 0.5rem 1.5rem;
+        background: #4299e1;
+        color: white;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 0.875rem;
+        transition: all 0.2s;
+
+        &:hover:not(:disabled) {
+          background: #3182ce;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          background: #a0aec0;
+        }
+      }
+    }
+
+    .page-size-control .page-size-select {
+      padding: 0.5rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      background: white;
+      color: #4a5568;
+      cursor: pointer;
+      font-size: 0.875rem;
+
+      &:focus {
+        outline: none;
+        border-color: #4299e1;
+      }
+    }
+  }
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 768px) {
+  .files-view {
+    padding: 1rem;
+
+    .header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 1rem;
+    }
+
+    .filters-section .filters-container {
+      flex-direction: column;
+    }
+
+    .pagination-section {
+      flex-direction: column;
+      gap: 1rem;
+      text-align: center;
+
+      .pagination-controls {
+        order: -1;
+      }
+    }
   }
 }
 </style>

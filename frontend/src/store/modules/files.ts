@@ -1,74 +1,113 @@
+import { Module, ActionContext } from "vuex";
 import axios from "axios";
-import { ActionContext } from "vuex";
-import { DocFile, FilesState, RootState } from "@/types";
+import { FilesState, RootState, File } from "@/types/files";
 
-const state: FilesState = {
-  items: [],
-  nextPageToken: null,
-  loading: false,
-};
+type FilesActionContext = ActionContext<FilesState, RootState>;
 
-const mutations = {
-  SET_FILES(
-    state: FilesState,
-    payload: { files: DocFile[]; nextPageToken: string | null }
-  ) {
-    state.items = payload.files;
-    state.nextPageToken = payload.nextPageToken;
-  },
-  SET_LOADING(state: FilesState, loading: boolean) {
-    state.loading = loading;
-  },
-};
-
-const actions = {
-  async fetchFiles(
-    { commit, state }: ActionContext<FilesState, RootState>,
-    {
-      page,
-      textQuery,
-      modifiedAfter,
-    }: { page: number; textQuery?: string; modifiedAfter?: string }
-  ) {
-    commit("SET_LOADING", true);
-    try {
-      const response = await axios.get("/files", {
-        params: {
-          pageToken: page > 1 ? state.nextPageToken : undefined,
-          pageSize: 10,
-          query: textQuery || "",
-          modifiedAfter,
-        },
-      });
-      commit("SET_FILES", {
-        files: response.data.files,
-        nextPageToken: response.data.nextPageToken,
-      });
-    } finally {
-      commit("SET_LOADING", false);
-    }
-  },
-
-  async deleteFile(
-    { dispatch }: ActionContext<FilesState, RootState>,
-    fileId: string
-  ) {
-    await axios.delete(`/files/${fileId}`);
-    dispatch("fetchFiles", { page: 1 });
-  },
-
-  async editFile(
-    { dispatch }: ActionContext<FilesState, RootState>,
-    { fileId, data }: { fileId: string; data: Partial<DocFile> }
-  ) {
-    await axios.patch(`/files/${fileId}`, data);
-    dispatch("fetchFiles", { page: 1 });
-  },
-};
-
-export default {
+const files: Module<FilesState, RootState> = {
   namespaced: true,
-  state,
-  mutations,
-  actions,
+
+  state: {
+    items: [],
+    currentFile: null,
+    nextPageToken: null,
+    loading: false,
+    error: null,
+    pageSize: 10,
+    hasMore: true,
+  },
+
+  mutations: {
+    SET_FILES(state, { files, nextPageToken }) {
+      state.items = files;
+      state.nextPageToken = nextPageToken;
+      state.hasMore = !!nextPageToken;
+    },
+    APPEND_FILES(state, { files, nextPageToken }) {
+      state.items = [...state.items, ...files];
+      state.nextPageToken = nextPageToken;
+      state.hasMore = !!nextPageToken;
+    },
+    SET_CURRENT_FILE(state, file: File) {
+      state.currentFile = file;
+    },
+    SET_LOADING(state, status: boolean) {
+      state.loading = status;
+    },
+    SET_ERROR(state, error: string | null) {
+      state.error = error;
+    },
+  },
+
+  actions: {
+    async fetchFiles(
+      { commit, state }: FilesActionContext,
+      payload: {
+        page: number;
+        filters?: { modifiedAfter?: string; query?: string };
+        nextPageToken: string;
+        pageSize: number;
+        loadMore: boolean;
+      }
+    ) {
+      commit("SET_LOADING", true);
+      try {
+        const { loadMore } = payload;
+        const response = await axios.post<{
+          files: File[];
+          nextPageToken: string;
+        }>("/files", {
+          pageToken: payload.page > 1 ? state.nextPageToken : undefined,
+          pageSize: payload.pageSize,
+          filters: payload.filters,
+          nextPageToken: payload.nextPageToken,
+        });
+        console.log("loadMore", loadMore);
+        if (loadMore) {
+          commit("APPEND_FILES", response.data);
+        } else {
+          commit("SET_FILES", response.data);
+        }
+      } catch (error) {
+        commit(
+          "SET_ERROR",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async fetchFileById({ commit }: FilesActionContext, fileId: string) {
+      commit("SET_LOADING", true);
+      try {
+        const response = await axios.get<File>(`/files/${fileId}`);
+        commit("SET_CURRENT_FILE", response.data);
+      } catch (error) {
+        commit(
+          "SET_ERROR",
+          error instanceof Error ? error.message : "Unknown error"
+        );
+        throw error;
+      } finally {
+        commit("SET_LOADING", false);
+      }
+    },
+
+    async deleteFile({ dispatch }: FilesActionContext, fileId: string) {
+      await axios.delete(`/files/${fileId}`);
+      return dispatch("fetchFiles", { page: 1 });
+    },
+
+    async updateFile(
+      { dispatch }: FilesActionContext,
+      payload: { fileId: string; data: Partial<File> }
+    ) {
+      await axios.patch(`/files/${payload.fileId}`, payload.data);
+      return dispatch("fetchFiles", { page: 1 });
+    },
+  },
 };
+
+export default files;
