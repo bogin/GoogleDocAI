@@ -62,12 +62,12 @@ class GoogleService {
         }
     }
 
-    async listFiles({ pageSize, pageToken = null, query = null, modifiedAfter = null }) {
+    async listFiles({ pageSize, nextPageToken = null, query = null, filters = null }) {
         try {
             let queryString = '';
 
-            if (modifiedAfter) {
-                queryString += `modifiedTime > '${new Date(modifiedAfter).toISOString()}'`;
+            if (filters?.modifiedAfter) {
+                queryString += `modifiedTime > '${new Date(filters.modifiedAfter).toISOString()}'`;
             }
 
             if (query) {
@@ -76,14 +76,19 @@ class GoogleService {
 
             const params = {
                 pageSize,
-                pageToken,
+                pageToken: nextPageToken,
                 fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, owners, size)',
                 orderBy: 'modifiedTime desc',
                 q: queryString || undefined
             };
 
             const response = await this.drive.files.list(params);
-            return response.data;
+
+            return {
+                files: response.data.files,
+                nextPageToken: response.data.nextPageToken,
+                hasMore: !!response.data.nextPageToken,
+            };
         } catch (error) {
             console.error('Error listing files:', error);
             throw error;

@@ -4,8 +4,8 @@ const DEFUALTS = {
 };
 
 class FilesService {
-  async listAllFiles({ pageSize, pageToken, query, modifiedAfter }) {
-    return googleService.listFiles({ pageSize: pageSize ? parseInt(pageSize) : DEFUALTS.pageSize, pageToken, query, modifiedAfter });
+  async listAllFiles({ pageSize, nextPageToken, query, filters }) {
+    return googleService.listFiles({ pageSize: pageSize ? parseInt(pageSize) : DEFUALTS.pageSize, nextPageToken, query, filters });
   }
 
   async getFileById(fileId) {
