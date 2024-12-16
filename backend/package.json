@@ -11,5 +11,9 @@
   },
   "keywords": [],
   "author": "Shachar Bogin",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0"
+  }
 }
