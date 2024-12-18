@@ -1,25 +1,48 @@
-const googleService = require('./google.service');
-const DEFUALTS = {
-    pageSize: 10,
+const filesRepository = require('../repo/files.repository');
+
+const DEFAULTS = {
+  page: 1,
+  size: 10,
 };
 
 class FilesService {
-  async listAllFiles({ pageSize, nextPageToken, query, filters }) {
-    return googleService.listFiles({ pageSize: pageSize ? parseInt(pageSize) : DEFUALTS.pageSize, nextPageToken, query, filters });
+  async listAllFiles(options = {}) {
+    const page = options.page ? parseInt(options.page) : DEFAULTS.page;
+    const size = options.size ? parseInt(options.size) : DEFAULTS.size;
+    const query = options.query;
+    const filters = options.filters;
+
+    // Perform any business logic transformations or validations here
+    return await filesRepository.findAll({
+      page,
+      size,
+      query,
+      filters
+    });
   }
 
   async getFileById(fileId) {
-    return googleService.getFile(fileId);
+    // Add any additional business logic or validation
+    return await filesRepository.findById(fileId);
   }
 
-  async deleteFileById(fileId) {
-    return googleService.deleteFile(fileId);
+  async createFile(fileData) {
+    // Perform any business logic validations
+    // For example, check file size, type, or other constraints
+    return await filesRepository.create(fileData);
   }
 
   async updateFileById(fileId, metadata) {
-    return googleService.updateFile(fileId, metadata);
+    // Add any business logic validations
+    // For example, check update permissions, validate metadata
+    return await filesRepository.update(fileId, metadata);
+  }
+
+  async deleteFileById(fileId) {
+    // Add any business logic checks
+    // For example, check deletion permissions
+    return await filesRepository.delete(fileId);
   }
 }
 
-const filesService = new FilesService();
-module.exports = filesService;
+module.exports = new FilesService();
