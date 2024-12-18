@@ -2,7 +2,7 @@ export interface DocFile {
   id: string;
   name: string;
   modifiedTime: string;
-  owners: Array<{ displayName: string }>;
+  owners: Array<{ name: string }>;
   size: number;
 }
 

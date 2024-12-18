@@ -2,7 +2,7 @@ const { File } = require('../models');
 const { Op } = require('sequelize');
 
 class FilesRepository {
-    async findAll({ page, size, query, filters }) {
+    async findAll({ page = 1, size = 10, query, filters }) {
         const whereConditions = {};
 
         // Handle query search across multiple fields
@@ -17,11 +17,11 @@ class FilesRepository {
         if (filters) {
             if (filters.mimeType) whereConditions.mimeType = filters.mimeType;
             if (filters.owner) whereConditions.owner = filters.owner;
-            if (filters.minSize) whereConditions.size = { [Op.gte]: filters.minSize };
-            if (filters.maxSize) whereConditions.size = {
-                ...whereConditions.size,
-                [Op.lte]: filters.maxSize
-            };
+            if (filters.modifiedAfter) {
+                whereConditions.modifiedTime = {
+                    [Op.gte]: new Date(filters.modifiedAfter)
+                };
+            }
         }
 
         const { count, rows: files } = await File.findAndCountAll({
@@ -37,7 +37,8 @@ class FilesRepository {
                 currentPage: page,
                 pageSize: size,
                 totalItems: count,
-                totalPages: Math.ceil(count / size)
+                totalPages: Math.ceil(count / size),
+                hasNextPage: page * size < count
             }
         };
     }

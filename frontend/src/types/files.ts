@@ -1,5 +1,5 @@
 export interface Owner {
-  displayName: string;
+  name: string;
 }
 
 export interface File {
@@ -13,11 +13,15 @@ export interface File {
 export interface FilesState {
   items: File[];
   currentFile: File | null;
-  nextPageToken: string | null;
   loading: boolean;
   error: string | null;
-  pageSize: number;
-  hasMore: boolean;
+  pagination: {
+    currentPage: 1;
+    pageSize: 10;
+    totalItems: 0;
+    totalPages: 0;
+    hasNextPage: false;
+  };
 }
 
 export interface RootState {

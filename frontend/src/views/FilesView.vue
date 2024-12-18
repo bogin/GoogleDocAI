@@ -1,10 +1,10 @@
 <template>
   <div class="files-view">
-    <!-- Header Section -->
+    <!-- Header Section (remains the same) -->
     <div class="header">
       <div class="title-section">
         <h1>Files Management</h1>
-        <p class="subtitle">Manage and organize your Google Drive files</p>
+        <p class="subtitle">Manage and organize your files</p>
       </div>
       <div class="actions">
         <button class="sync-btn" @click="fetchFiles" :disabled="loading">
@@ -14,7 +14,7 @@
       </div>
     </div>
 
-    <!-- Filters Section -->
+    <!-- Filters Section (remains the same) -->
     <div class="filters-section">
       <div class="filters-container">
         <TextFilter
@@ -66,28 +66,13 @@
       </div>
     </div>
 
-    <!-- Simple Pagination -->
-    <div class="pagination-section" v-if="files.length > 0">
-      <div class="pagination-info">Showing {{ files.length }} files</div>
-
-      <div class="pagination-controls">
-        <button class="page-btn" :disabled="!hasMore" @click="loadMore">
-          Load More
-        </button>
-      </div>
-
-      <div class="page-size-control">
-        <select
-          v-model="pageSize"
-          @change="handlePageSizeChange"
-          class="page-size-select"
-        >
-          <option :value="10">10 per page</option>
-          <option :value="25">25 per page</option>
-          <option :value="50">50 per page</option>
-        </select>
-      </div>
-    </div>
+    <!-- Pagination Section -->
+    <AppPagination
+      :pagination="pagination"
+      :page-size="pageSize"
+      @page-change="changePage"
+      @size-change="handlePageSizeChange"
+    />
   </div>
 </template>
 
@@ -97,14 +82,16 @@ import { useStore } from "vuex";
 import TextFilter from "@/components/filters/TextFilter.vue";
 import DateFilter from "@/components/filters/DateFilter.vue";
 import FilesTable from "@/components/FilesTable.vue";
+import AppPagination from "@/components/AppPagination.vue";
 
 export default defineComponent({
   name: "FilesView",
-  components: { TextFilter, DateFilter, FilesTable },
+  components: { TextFilter, DateFilter, FilesTable, AppPagination },
 
   setup() {
     const store = useStore();
     const pageSize = ref(10);
+    const currentPage = ref(1);
     const filters = ref({
       query: "",
       modifiedAfter: null as string | null,
@@ -113,57 +100,89 @@ export default defineComponent({
     // Computed properties
     const files = computed(() => store.state.files.items);
     const loading = computed(() => store.state.files.loading);
-    const hasMore = computed(() => store.state.files.hasMore);
-    const nextPageToken = computed(() => store.state.files.nextPageToken);
+    const pagination = computed(() => store.state.files.pagination);
+
+    const visiblePageNumbers = computed(() => {
+      const current = pagination.value.currentPage;
+      const total = pagination.value.totalPages;
+      const delta = 2;
+      const left = current - delta;
+      const right = current + delta + 1;
+      const range = [];
+      const rangeWithDots = [];
+      let l;
+
+      for (let i = 1; i <= total; i++) {
+        if (i === 1 || i === total || (i >= left && i < right)) {
+          range.push(i);
+        }
+      }
+
+      for (let i of range) {
+        if (l) {
+          if (i - l === 2) {
+            rangeWithDots.push(l + 1);
+          } else if (i - l !== 1) {
+            rangeWithDots.push("...");
+          }
+        }
+        rangeWithDots.push(i);
+        l = i;
+      }
+
+      return rangeWithDots;
+    });
+
     const hasActiveFilters = computed(() =>
       Boolean(filters.value.query || filters.value.modifiedAfter)
     );
 
     // Methods
     const fetchFiles = () => {
-      console.log("filters", filters.value);
+      console.log("currentPage", currentPage.value);
+      console.log("pagination", pagination.value);
+      console.log("pageSize", pageSize.value);
       store.dispatch("files/fetchFiles", {
-        pageSize: pageSize.value,
+        page: currentPage.value,
+        size: pageSize.value,
         filters: filters.value,
+        pagination: pagination.value,
       });
     };
 
-    const loadMore = () => {
-      if (!loading.value && hasMore.value) {
-        store.dispatch("files/fetchFiles", {
-          pageSize: pageSize.value,
-          loadMore: true,
-          filters: filters.value,
-          nextPageToken: nextPageToken.value,
-        });
+    const changePage = (page: number) => {
+      if (page > 0 && page <= pagination.value.totalPages) {
+        currentPage.value = page;
+        fetchFiles();
       }
     };
 
-    const handlePageSizeChange = () => {
+    const handlePageSizeChange = (value: number) => {
+      pageSize.value = value;
       fetchFiles();
     };
 
     const updateTextFilter = (value: string) => {
       filters.value.query = value;
-
+      currentPage.value = 1;
       fetchFiles();
     };
 
     const updateDateFilter = (value: string | null) => {
       filters.value.modifiedAfter = value;
-
+      currentPage.value = 1;
       fetchFiles();
     };
 
     const clearTextFilter = () => {
       filters.value.query = "";
-
+      currentPage.value = 1;
       fetchFiles();
     };
 
     const clearDateFilter = () => {
       filters.value.modifiedAfter = null;
-
+      currentPage.value = 1;
       fetchFiles();
     };
 
@@ -200,9 +219,11 @@ export default defineComponent({
     return {
       files,
       loading,
-      hasMore,
+      pagination,
       filters,
       pageSize,
+      currentPage,
+      visiblePageNumbers,
       hasActiveFilters,
       updateTextFilter,
       updateDateFilter,
@@ -211,7 +232,7 @@ export default defineComponent({
       clearDateFilter,
       formatDate,
       fetchFiles,
-      loadMore,
+      changePage,
       handleDelete,
       handleEdit,
     };
@@ -391,44 +412,6 @@ export default defineComponent({
     background: white;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-
-    .pagination-controls {
-      .page-btn {
-        padding: 0.5rem 1.5rem;
-        background: #4299e1;
-        color: white;
-        border: none;
-        border-radius: 6px;
-        cursor: pointer;
-        font-size: 0.875rem;
-        transition: all 0.2s;
-
-        &:hover:not(:disabled) {
-          background: #3182ce;
-        }
-
-        &:disabled {
-          opacity: 0.5;
-          cursor: not-allowed;
-          background: #a0aec0;
-        }
-      }
-    }
-
-    .page-size-control .page-size-select {
-      padding: 0.5rem;
-      border: 1px solid #e2e8f0;
-      border-radius: 6px;
-      background: white;
-      color: #4a5568;
-      cursor: pointer;
-      font-size: 0.875rem;
-
-      &:focus {
-        outline: none;
-        border-color: #4299e1;
-      }
-    }
   }
 }
 

@@ -18,10 +18,12 @@
             <tr v-for="file in files" :key="file.id">
               <td>
                 <div class="file-name" @click="handleView(file.id)">
-                  {{ file.name }}
+                  <el-tooltip :content="file.name" placement="top">
+                    <span>{{ truncatedFileName(file.name) }}</span>
+                  </el-tooltip>
                 </div>
               </td>
-              <td>{{ file.owners?.[0]?.displayName || "Unknown" }}</td>
+              <td>{{ file.owner || "Unknown" }}</td>
               <td>{{ formatDate(file.modifiedTime) }}</td>
               <td>{{ formatSize(file.size) }}</td>
               <td class="actions">
@@ -161,7 +163,12 @@ export default defineComponent({
       deletingFileId.value = null;
     };
 
+    const truncatedFileName = (name: string) => {
+      return name.length > 10 ? name.substring(0, 10) + "..." : name;
+    };
+
     return {
+      truncatedFileName,
       showEditModal,
       showDeleteModal,
       editingFile,

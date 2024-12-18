@@ -3,14 +3,16 @@ const filesService = require('../services/files.service');
 class FilesController {
   async listFiles(req, res, next) {
     try {
-      const { page, size, query, filters } = req.body;
-      const files = await filesService.listAllFiles({
-        page,
-        size,
+      const { page, size, query, filters, pagination } = req.body;
+
+      const result = await filesService.listAllFiles({
+        page: page ? parseInt(page) : undefined,
+        size: size ? parseInt(size) : undefined,
         query,
-        filters
+        filters: filters ? JSON.parse(filters) : undefined
       });
-      res.json(files);
+
+      res.json(result);
     } catch (error) {
       next(error);
     }

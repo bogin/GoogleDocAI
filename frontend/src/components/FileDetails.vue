@@ -23,7 +23,7 @@
 
         <div class="detail-item">
           <label>Owner:</label>
-          <span>{{ file.owners?.[0]?.displayName || "Unknown" }}</span>
+          <span>{{ file.owners?.[0]?.name || "Unknown" }}</span>
         </div>
       </div>
 

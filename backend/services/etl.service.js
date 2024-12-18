@@ -122,7 +122,7 @@ class ETLService {
                             name: fileData.name,
                             mimeType: fileData.mimeType,
                             modifiedTime: new Date(fileData.modifiedTime),
-                            owner: fileData.owners?.[0]?.displayName,
+                            owner: fileData.owners?.[0]?.name,
                             size: fileData.size,
                             metadata: fileData,
                             sync_status: 'success'
@@ -167,7 +167,7 @@ class ETLService {
                 name: response.data.name,
                 mimeType: response.data.mimeType,
                 modifiedTime: new Date(response.data.modifiedTime),
-                owner: response.data.owners?.[0]?.displayName,
+                owner: response.data.owners?.[0]?.name,
                 size: response.data.size,
                 metadata: response.data,
                 sync_status: 'success',

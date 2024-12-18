@@ -9,15 +9,12 @@ class FilesService {
   async listAllFiles(options = {}) {
     const page = options.page ? parseInt(options.page) : DEFAULTS.page;
     const size = options.size ? parseInt(options.size) : DEFAULTS.size;
-    const query = options.query;
-    const filters = options.filters;
 
-    // Perform any business logic transformations or validations here
     return await filesRepository.findAll({
       page,
       size,
-      query,
-      filters
+      query: options.query,
+      filters: options.filters
     });
   }
 
