@@ -30,6 +30,10 @@ class GoogleService {
         return tokens;
     }
 
+    getAuth() {
+        return this.auth;
+    }
+
     getAuthUrl() {
         return this.auth.generateAuthUrl({
             access_type: 'offline',
@@ -48,6 +52,7 @@ class GoogleService {
                 try {
                     await this.drive.files.list({ pageSize: 1 });
                     console.log('Google Auth initialized successfully');
+                    return this.auth;
                 } catch (error) {
                     console.log('Stored credentials are invalid, needs re-authentication');
                     // Clear invalid tokens
