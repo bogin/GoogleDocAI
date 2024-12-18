@@ -3,6 +3,7 @@ const { File } = require('../models');
 const syncQueue = require('./queue.service');
 const { google } = require('googleapis');
 const { sequelize } = require('../models');
+const { SystemSetting } = require('../models');
 
 const SyncStatus = {
     PENDING: 'pending',
@@ -13,15 +14,40 @@ const SyncStatus = {
 };
 
 class ETLService {
-    constructor(auth) {
+    constructor(auth, options = {}) {
         this.drive = google.drive({ version: 'v3', auth });
         this.lastSyncTime = null;
         this.maxRetries = 3;
         this.issyncing = false;
-        this.syncQueue = syncQueue;
-
-        // Initialize queue processor
+        this.syncQueue = options.queue || syncQueue;
         this.syncQueue.setTaskProcessor(this.processTask.bind(this));
+    }
+
+    async loadLastSyncTime() {
+        try {
+            const setting = await SystemSetting.findOne({
+                where: { key: 'lastSyncTime' }
+            });
+            
+            if (setting?.value?.time) {
+                this.lastSyncTime = new Date(setting.value.time);
+            } else {
+                this.lastSyncTime = null; // or handle the case when no sync time is found
+            }
+        } catch (error) {
+            console.error('Error loading last sync time:', error);
+            // Optionally handle the error (e.g., set a default value or log)
+            this.lastSyncTime = null;
+        }
+    }
+    
+    async updateLastSyncTime() {
+        const now = new Date();
+        await SystemSetting.upsert({
+            key: 'lastSyncTime',
+            value: { time: now.toISOString() }
+        });
+        this.lastSyncTime = now;
     }
 
     async determineFilesToSync() {
@@ -85,13 +111,15 @@ class ETLService {
                 pageToken = response.data.nextPageToken;
             } while (pageToken);
 
-            this.lastSyncTime = new Date();
+            await this.updateLastSyncTime();
         } catch (error) {
             console.error('Failed to check for new files:', error);
         }
     }
 
     async startPeriodicSync() {
+        await this.loadLastSyncTime();
+
         // First, check for modified files and mark as stale if needed
         const modifiedFiles = await this.checkForModifiedFiles();
         if (modifiedFiles?.data?.files?.length > 0) {
@@ -109,13 +137,11 @@ class ETLService {
         await this.checkForNewFiles();
         await this.syncFiles();
 
-        setInterval(() => {
-            this.checkForNewFiles();
+        setInterval(async () => {
+            await this.checkForNewFiles();
+            await this.syncFiles();
         }, 5 * 60 * 1000);
 
-        setInterval(() => {
-            this.syncFiles();
-        }, 15 * 60 * 1000);
     }
 
     async checkForModifiedFiles() {
@@ -236,7 +262,6 @@ class ETLService {
                 }));
             }
 
-            console.log('Batch processing results:', results);
             return results;
 
         } catch (error) {

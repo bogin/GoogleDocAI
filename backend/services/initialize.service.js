@@ -1,4 +1,3 @@
-
 const GoogleService = require('./google.service');
 const ETLService = require('./etl.service');
 const validateDatabaseConnection = require('./db.service');
@@ -18,16 +17,15 @@ async function initializeServices(auth = null) {
         if (!auth) {
             console.error('Google authentication failed');
             return false;
-        } else {
-            console.log('Google Auth initialized successfully');
-
-            // 3. Initialize ETL Service
-            const etlService = new ETLService(auth);
-            await etlService.startPeriodicSync();
-            console.log('ETL Service started successfully');
-
-            return true;
         }
+        console.log('Google Auth initialized successfully');
+
+        // 3. Initialize ETL Service without queue monitoring
+        const etlService = new ETLService(auth);
+        await etlService.startPeriodicSync();
+        console.log('ETL Service started successfully');
+
+        return true;
 
     } catch (error) {
         console.error('Services initialization failed:', error);

@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const routes = require('./routes/index');
 const initializeServices = require('./services/initialize.service');
+const validateDatabaseConnection = require('./services/db.service');
+const googleService = require('./services/google.service');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -24,21 +26,30 @@ app.use(errorHandler);
 
 async function startServer() {
   try {
-    // Initialize all services
-    const servicesInitialized = await initializeServices();
-    if (!servicesInitialized) {
-      console.error('Failed to initialize services');
+    // Only initialize what's needed for API
+    const isDbConnected = await validateDatabaseConnection();
+    if (!isDbConnected) {
+      throw new Error('Database connection failed');
+    }
+    console.log('Database connected successfully');
+
+    // Initialize Google Auth for API endpoints
+    const auth = await googleService.initializeGoogleAuth();
+    if (!auth) {
+      console.error('Google authentication failed');
+    } else {
+      console.log('Google Auth initialized successfully');
     }
 
-    // Start the server
     app.listen(port, () => {
-      console.log(`Server running on port ${port}`);
+      console.log(`API Server running on port ${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
   }
 }
+
 
 // Handle process termination
 process.on('SIGTERM', () => {

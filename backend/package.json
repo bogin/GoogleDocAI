@@ -6,14 +6,18 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "queue": "node index2.js",
+    "queue_dev": "nodemon index2.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:migrate": "sequelize-cli db:migrate",
+    "migrate:generate": "sequelize-cli migration:generate --name",
     "db:migrate:undo": "sequelize-cli db:migrate:undo",
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate",
-    "setup:db": "node scripts/setup-db.js"
+    "setup:db": "node scripts/setup-db.js",
+    "dev:all": "concurrently \"npm run dev\" \"npm run queue_dev\""
   },
   "keywords": [],
   "author": "Shachar Bogin",
@@ -30,5 +34,9 @@
     "pg-hstore": "^2.3.4",
     "sequelize": "^6.37.5",
     "sequelize-cli": "^6.6.2"
+  },
+  "devDependencies": {
+    "concurrently": "^8.0.0",
+    "nodemon": "^3.0.0"
   }
 }

@@ -1,7 +1,60 @@
+const { File } = require('../models');
+const { Op } = require('sequelize');
+
 class SyncQueue {
     constructor() {
         this.queue = [];
         this.isProcessing = false;
+        this.lastCheckTime = null;
+        this.monitorInterval = null;
+    }
+
+    startMonitoring() {
+        // Run monitor every minute
+        this.monitorInterval = setInterval(() => {
+            this.checkForChanges();
+        }, 60 * 1000); // 1 minute
+    }
+
+    stopMonitoring() {
+        if (this.monitorInterval) {
+            clearInterval(this.monitorInterval);
+            this.monitorInterval = null;
+        }
+    }
+
+    async checkForChanges() {
+        try {
+        
+            // Find files modified since last check
+            const modifiedFiles = await File.findAll({
+                where: {
+                    [Op.or]: [
+                        {
+                            modifiedTime: {
+                                [Op.gt]: this.lastCheckTime || new Date(0)
+                            }
+                        },
+                        {
+                            syncStatus: {
+                                [Op.in]: ['pending', 'error']
+                            }
+                        }
+                    ]
+                }
+            });
+
+            if (modifiedFiles.length > 0) {
+                await this.addToQueue({
+                    type: 'UPDATE_CHECK',
+                    files: modifiedFiles
+                });
+            }
+
+            this.lastCheckTime = new Date();
+        } catch (error) {
+            console.error('Error checking for changes:', error);
+        }
     }
 
     async addToQueue(task) {
@@ -13,7 +66,7 @@ class SyncQueue {
 
     async processQueue() {
         if (this.isProcessing || this.queue.length === 0) return;
-        
+
         this.isProcessing = true;
         try {
             const task = this.queue.shift();
@@ -29,7 +82,6 @@ class SyncQueue {
     }
 
     async processTask(task) {
-        // This will be implemented in ETLService
         if (this.taskProcessor) {
             await this.taskProcessor(task);
         }
@@ -40,4 +92,5 @@ class SyncQueue {
     }
 }
 
-module.exports = new SyncQueue();
+const queue = new SyncQueue();
+module.exports = queue;
