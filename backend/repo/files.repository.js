@@ -15,8 +15,6 @@ class FilesRepository {
 
         // Handle additional filters
         if (filters) {
-            if (filters.mimeType) whereConditions.mimeType = filters.mimeType;
-            if (filters.owner) whereConditions.owner = filters.owner;
             if (filters.modifiedAfter) {
                 whereConditions.modifiedTime = {
                     [Op.gte]: new Date(filters.modifiedAfter)

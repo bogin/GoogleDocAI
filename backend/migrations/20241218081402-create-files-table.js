@@ -12,25 +12,41 @@ module.exports = {
       mime_type: {
         type: Sequelize.STRING
       },
-      modified_time: {
-        type: Sequelize.DATE
+      icon_link: {
+        type: Sequelize.STRING
       },
-      owner: {
+      web_view_link: {
         type: Sequelize.STRING
       },
       size: {
-        type: Sequelize.BIGINT
+        type: Sequelize.STRING
       },
-      metadata: {
+      shared: {
+        type: Sequelize.BOOLEAN
+      },
+      trashed: {
+        type: Sequelize.BOOLEAN
+      },
+      created_time: {
+        type: Sequelize.DATE
+      },
+      modified_time: {
+        type: Sequelize.DATE
+      },
+      version: {
+        type: Sequelize.STRING
+      },
+      owner: {
+        type: Sequelize.JSONB // Store full owner object
+      },
+      last_modifying_user: {
         type: Sequelize.JSONB
       },
-      created_at: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      permissions: {
+        type: Sequelize.JSONB
       },
-      updated_at: {
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      capabilities: {
+        type: Sequelize.JSONB
       },
       sync_status: {
         type: Sequelize.STRING,
@@ -41,14 +57,20 @@ module.exports = {
       },
       error_log: {
         type: Sequelize.JSONB
+      },
+      metadata: {
+        type: Sequelize.JSONB // Store complete raw response
+      },
+      created_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
-
-    await queryInterface.addIndex('files', ['modified_time']);
-    await queryInterface.addIndex('files', ['owner']);
-    await queryInterface.addIndex('files', ['sync_status']);
   },
-
   down: async (queryInterface) => {
     await queryInterface.dropTable('files');
   }

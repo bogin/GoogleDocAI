@@ -1,4 +1,5 @@
 const filesRepository = require('../repo/files.repository');
+const openaiService = require('./openai.service');
 
 const DEFAULTS = {
   page: 1,
@@ -9,11 +10,13 @@ class FilesService {
   async listAllFiles(options = {}) {
     const page = options.page ? parseInt(options.page) : DEFAULTS.page;
     const size = options.size ? parseInt(options.size) : DEFAULTS.size;
+    if (filters?.query) {
+      const filters = openaiService
+    }
 
     return await filesRepository.findAll({
       page,
       size,
-      query: options.query,
       filters: options.filters
     });
   }

@@ -22,9 +22,9 @@ async function initializeServices(auth = null) {
             console.log('Google Auth initialized successfully');
 
             // 3. Initialize ETL Service
-            // const etlService = new ETLService(auth);
-            // await etlService.startPeriodicSync();
-            // console.log('ETL Service started successfully');
+            const etlService = new ETLService(auth);
+            await etlService.startPeriodicSync();
+            console.log('ETL Service started successfully');
 
             return true;
         }
