@@ -7,12 +7,22 @@ class SyncQueue {
         this.isProcessing = false;
         this.lastCheckTime = null;
         this.monitorInterval = null;
+        this.isInitialized = false;
+    }
+
+    setInitialized(value) {
+        this.isInitialized = value;
+        if (value && !this.monitorInterval) {
+            this.startMonitoring();
+        }
     }
 
     startMonitoring() {
         // Run monitor every minute
         this.monitorInterval = setInterval(() => {
-            this.checkForChanges();
+            if (this.isInitialized) {
+                this.checkForChanges();
+            }
         }, 60 * 1000); // 1 minute
     }
 
@@ -25,14 +35,14 @@ class SyncQueue {
 
     async checkForChanges() {
         try {
-        
+
             // Find files modified since last check
             const modifiedFiles = await File.findAll({
                 where: {
                     [Op.or]: [
                         {
                             modifiedTime: {
-                                [Op.gt]: this.lastCheckTime || new Date(0)
+                                [Op.gt]: this.lastCheckTime || new Date()
                             }
                         },
                         {

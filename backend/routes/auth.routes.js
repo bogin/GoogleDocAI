@@ -1,6 +1,7 @@
 const express = require('express');
 const googleService = require('../services/google.service');
-const { initializeServices } = require('../services/initialize.service');
+const etlService = require('../services/etl.service');
+const queue = require('../services/queue.service');
 
 const router = express.Router();
 
@@ -14,9 +15,9 @@ router.get('/google/callback', async (req, res) => {
     const { code } = req.query;
     await googleService.setCredentials(code);
     const auth = googleService.getAuth();
-    const servicesInitialized = await initializeServices(auth);
-    if (!servicesInitialized) {
-      console.error('Failed to initialize services');
+    if (auth) {
+      etlService.setAuth(auth);
+      queue.setInitialized(true);
     }
     res.send('Authentication successful! You can close this window.');
   } catch (error) {

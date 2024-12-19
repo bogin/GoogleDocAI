@@ -7,7 +7,8 @@ module.exports = {
         database: process.env.DB_NAME || 'unframe_dev',
         host: process.env.DB_HOST || 'localhost',
         port: process.env.DB_PORT || 5432,
-        dialect: 'postgres'
+        dialect: 'postgres',
+        logging: false
     },
     test: {
         username: process.env.DB_USER,

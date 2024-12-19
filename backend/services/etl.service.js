@@ -4,6 +4,7 @@ const syncQueue = require('./queue.service');
 const { google } = require('googleapis');
 const { sequelize } = require('../models');
 const { SystemSetting } = require('../models');
+const EventEmitter = require('events');
 
 const SyncStatus = {
     PENDING: 'pending',
@@ -13,34 +14,84 @@ const SyncStatus = {
     IN_PROGRESS: 'in_progress'
 };
 
-class ETLService {
-    constructor(auth, options = {}) {
-        this.drive = google.drive({ version: 'v3', auth });
+class ETLService extends EventEmitter {
+    constructor() {
+        super();
+        this.drive = null;
         this.lastSyncTime = null;
         this.maxRetries = 3;
         this.issyncing = false;
-        this.syncQueue = options.queue || syncQueue;
+        this.syncQueue = syncQueue;
         this.syncQueue.setTaskProcessor(this.processTask.bind(this));
+        this.isInitialized = false;
+        this.authCheckInterval = null;
+    }
+
+    async initialize() {
+        // Start periodic sync without waiting for auth
+        this.startPeriodicSync().catch(console.error);
+
+        // Set up auth check interval
+        this.authCheckInterval = setInterval(() => {
+            if (!this.isInitialized) {
+                console.log('Waiting for auth...');
+            }
+        }, 5000);
+
+        // Listen for initialization
+        return new Promise((resolve) => {
+            if (this.isInitialized) {
+                resolve();
+            } else {
+                this.once('initialized', resolve);
+            }
+        });
+    }
+
+    setAuth(auth) {
+        if (!auth) return;
+
+        this.drive = google.drive({ version: 'v3', auth });
+        this.isInitialized = true;
+        this.emit('initialized');
+
+        if (this.authCheckInterval) {
+            clearInterval(this.authCheckInterval);
+            this.authCheckInterval = null;
+        }
+    }
+
+    async waitForAuth() {
+        if (this.isInitialized) return;
+
+        return new Promise((resolve) => {
+            const checkAuth = setInterval(() => {
+                if (this.isInitialized) {
+                    clearInterval(checkAuth);
+                    resolve();
+                }
+            }, 3000); // Check every second
+        });
     }
 
     async loadLastSyncTime() {
+        await this.waitForAuth();
         try {
             const setting = await SystemSetting.findOne({
                 where: { key: 'lastSyncTime' }
             });
-            
+
             if (setting?.value?.time) {
                 this.lastSyncTime = new Date(setting.value.time);
             } else {
-                this.lastSyncTime = null; // or handle the case when no sync time is found
+                this.lastSyncTime = null;
             }
         } catch (error) {
             console.error('Error loading last sync time:', error);
-            // Optionally handle the error (e.g., set a default value or log)
             this.lastSyncTime = null;
         }
     }
-    
+
     async updateLastSyncTime() {
         const now = new Date();
         await SystemSetting.upsert({
@@ -118,6 +169,11 @@ class ETLService {
     }
 
     async startPeriodicSync() {
+        if (this.auth) {
+            this.setAuth(this.auth);
+        }
+
+        await this.waitForAuth();
         await this.loadLastSyncTime();
 
         // First, check for modified files and mark as stale if needed
@@ -138,10 +194,11 @@ class ETLService {
         await this.syncFiles();
 
         setInterval(async () => {
-            await this.checkForNewFiles();
-            await this.syncFiles();
-        }, 5 * 60 * 1000);
-
+            if (this.isInitialized) {
+                await this.checkForNewFiles();
+                await this.syncFiles();
+            }
+        }, 1 * 60 * 1000);
     }
 
     async checkForModifiedFiles() {
@@ -313,4 +370,5 @@ class ETLService {
     }
 }
 
-module.exports = ETLService;
+const etlService = new ETLService();
+module.exports = etlService;

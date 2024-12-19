@@ -10,9 +10,9 @@ class FilesService {
   async listAllFiles(options = {}) {
     const page = options.page ? parseInt(options.page) : DEFAULTS.page;
     const size = options.size ? parseInt(options.size) : DEFAULTS.size;
-    if (filters?.query) {
-      const filters = openaiService
-    }
+    // if (filters?.query) {
+    //   const filters = openaiService
+    // }
 
     return await filesRepository.findAll({
       page,
