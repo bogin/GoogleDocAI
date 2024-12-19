@@ -20,7 +20,7 @@ class ETLService extends EventEmitter {
         this.drive = null;
         this.lastSyncTime = null;
         this.maxRetries = 3;
-        this.issyncing = false;
+        this.isSyncing = false;
         this.syncQueue = syncQueue;
         this.syncQueue.setTaskProcessor(this.processTask.bind(this));
         this.isInitialized = false;
@@ -217,12 +217,12 @@ class ETLService extends EventEmitter {
     }
 
     async syncFiles(retryCount = 0) {
-        if (this.issyncing) {
+        if (this.isSyncing) {
             console.log('Sync already in progress');
             return;
         }
 
-        this.issyncing = true;
+        this.isSyncing = true;
         try {
             // Get files that need syncing
             const filesToSync = await File.findAll({
@@ -254,7 +254,7 @@ class ETLService extends EventEmitter {
                 return this.syncFiles(retryCount + 1);
             }
         } finally {
-            this.issyncing = false;
+            this.isSyncing = false;
         }
     }
 

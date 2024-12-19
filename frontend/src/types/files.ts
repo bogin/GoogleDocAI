@@ -1,13 +1,9 @@
-export interface Owner {
-  name: string
-}
-
 export interface File {
   id: string
   name: string
   size: number
   modifiedTime: string
-  owners: Owner[]
+  owner: { displayName: string }
 }
 
 export interface FilesState {

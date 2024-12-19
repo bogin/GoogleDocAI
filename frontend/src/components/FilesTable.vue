@@ -1,29 +1,25 @@
 <template>
   <div class="files-table-wrapper">
-    <div class="table-container">
-      <table class="files-table">
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Owner</th>
-            <th>Modified</th>
-            <th>Size</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
-      </table>
-      <div class="table-body-container">
+    <div class="table-container" v-if="files.length">
+      <div class="table-scroll-container">
         <table class="files-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Owner</th>
+              <th>Modified</th>
+              <th>Size</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
           <tbody>
             <tr v-for="file in files" :key="file.id">
               <td>
-                <div class="file-name" @click="handleView(file.id)">
-                  <el-tooltip :content="file.name" placement="top">
-                    <span>{{ truncatedFileName(file.name) }}</span>
-                  </el-tooltip>
-                </div>
+                <el-tooltip :content="file.name" placement="top">
+                  <span>{{ truncatedFileName(file.name) }}</span>
+                </el-tooltip>
               </td>
-              <td>{{ file.owner || 'Unknown' }}</td>
+              <td>{{ file.owner?.displayName || 'Unknown' }}</td>
               <td>{{ formatDate(file.modifiedTime) }}</td>
               <td>{{ formatSize(file.size) }}</td>
               <td class="actions">
@@ -40,13 +36,6 @@
                   title="Delete"
                 >
                   🗑️
-                </button>
-                <button
-                  class="btn btn-view"
-                  @click="handleView(file.id)"
-                  title="View Details"
-                >
-                  👁️
                 </button>
               </td>
             </tr>
@@ -131,10 +120,6 @@ export default defineComponent({
       showDeleteModal.value = true
     }
 
-    const handleView = (fileId: string) => {
-      router.push(`/files/${fileId}`)
-    }
-
     const saveEdit = () => {
       if (editingFile.value.id) {
         emit('update', {
@@ -174,7 +159,6 @@ export default defineComponent({
       editingFile,
       handleEdit,
       handleDelete,
-      handleView,
       saveEdit,
       cancelEdit,
       confirmDelete,
@@ -198,47 +182,76 @@ export default defineComponent({
   position: relative;
   height: 100%;
   min-height: 400px;
-  max-height: calc(86vh - 300px); // Adjust based on your layout
-  display: flex;
-  flex-direction: column;
+  max-height: calc(86vh - 300px);
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.table-scroll-container {
+  height: 100%;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
+  }
 }
 
 .files-table {
   width: 100%;
   border-collapse: collapse;
 
-  th,
-  td {
-    padding: 12px;
-    text-align: left;
-    white-space: nowrap;
-
-    &:first-child {
-      padding-left: 24px;
-    }
-
-    &:last-child {
-      padding-right: 24px;
-    }
-  }
-
   thead {
-    tr {
-      height: 48px;
-      background: #f8f9fa;
-    }
+    position: sticky;
+    top: 0;
+    z-index: 1;
 
     th {
-      position: sticky;
-      top: 0;
       background: #f8f9fa;
-      z-index: 1;
+      padding: 12px;
+      text-align: left;
       font-weight: 600;
       color: #4a5568;
       border-bottom: 2px solid #e2e8f0;
+      white-space: nowrap;
+
+      &:first-child {
+        padding-left: 24px;
+      }
+
+      &:last-child {
+        padding-right: 24px;
+      }
+    }
+  }
+
+  tbody {
+    td {
+      padding: 12px;
+      text-align: left;
+      white-space: nowrap;
+
+      &:first-child {
+        padding-left: 24px;
+      }
+
+      &:last-child {
+        padding-right: 24px;
+      }
     }
   }
 }
@@ -298,7 +311,7 @@ export default defineComponent({
 .actions {
   display: flex;
   gap: 8px;
-  justify-content: flex-end;
+  justify-content: flex-start;
 
   .btn {
     padding: 6px;

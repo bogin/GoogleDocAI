@@ -6,27 +6,20 @@
         <h1>Files Management</h1>
         <p class="subtitle">Manage and organize your files</p>
       </div>
-      <div class="actions">
-        <button class="sync-btn" @click="fetchFiles" :disabled="loading">
-          <span class="icon">🔄</span>
-          {{ loading ? 'Syncing...' : 'Sync Files' }}
-        </button>
-      </div>
     </div>
 
     <!-- Filters Section (remains the same) -->
     <div class="filters-section">
       <div class="filters-container">
-        <TextFilter
-          :model-value="filters.query"
-          @update:model-value="updateTextFilter"
-          placeholder="Search in files..."
-        />
+        <TextFilter v-model="filters.query" @search="applyFilters" />
         <DateFilter
           :model-value="filters.modifiedAfter"
           @update:model-value="updateDateFilter"
           placeholder="Modified After"
         />
+        <button class="apply-filters-btn" @click="applyFilters">
+          Apply Filters
+        </button>
       </div>
 
       <div class="active-filters" v-if="hasActiveFilters">
@@ -102,6 +95,29 @@ export default defineComponent({
     const loading = computed(() => store.state.files.loading)
     const pagination = computed(() => store.state.files.pagination)
 
+    const applyFilters = () => {
+      currentPage.value = 1
+      fetchFiles()
+    }
+
+    const updateTextFilter = (value: string) => {
+      filters.value.query = value
+    }
+
+    const updateDateFilter = (value: string | null) => {
+      filters.value.modifiedAfter = value
+    }
+
+    const clearTextFilter = () => {
+      filters.value.query = ''
+      applyFilters()
+    }
+
+    const clearDateFilter = () => {
+      filters.value.modifiedAfter = null
+      applyFilters()
+    }
+
     const visiblePageNumbers = computed(() => {
       const current = pagination.value.currentPage
       const total = pagination.value.totalPages
@@ -162,30 +178,6 @@ export default defineComponent({
       fetchFiles()
     }
 
-    const updateTextFilter = (value: string) => {
-      filters.value.query = value
-      currentPage.value = 1
-      fetchFiles()
-    }
-
-    const updateDateFilter = (value: string | null) => {
-      filters.value.modifiedAfter = value
-      currentPage.value = 1
-      fetchFiles()
-    }
-
-    const clearTextFilter = () => {
-      filters.value.query = ''
-      currentPage.value = 1
-      fetchFiles()
-    }
-
-    const clearDateFilter = () => {
-      filters.value.modifiedAfter = null
-      currentPage.value = 1
-      fetchFiles()
-    }
-
     const formatDate = (date: string | null) => {
       return date ? new Date(date).toLocaleDateString() : ''
     }
@@ -214,6 +206,11 @@ export default defineComponent({
       }
     }
 
+    const handleSearch = (query: string) => {
+      updateTextFilter(query)
+      fetchFiles() // Trigger the search
+    }
+
     onMounted(fetchFiles)
 
     return {
@@ -226,6 +223,7 @@ export default defineComponent({
       visiblePageNumbers,
       hasActiveFilters,
       updateTextFilter,
+      handleSearch,
       updateDateFilter,
       handlePageSizeChange,
       clearTextFilter,
@@ -235,6 +233,7 @@ export default defineComponent({
       changePage,
       handleDelete,
       handleEdit,
+      applyFilters,
     }
   },
 })
@@ -307,7 +306,29 @@ export default defineComponent({
     .filters-container {
       display: flex;
       gap: 1rem;
-      flex-wrap: wrap;
+      align-items: center;
+
+      .apply-filters-btn {
+        height: 44px;
+        padding: 0 24px;
+        background: #1a73e8;
+        color: white;
+        border: none;
+        border-radius: 24px;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        white-space: nowrap;
+
+        &:hover {
+          background: #1557b0;
+        }
+
+        &:active {
+          background: #174ea6;
+        }
+      }
     }
 
     .active-filters {
