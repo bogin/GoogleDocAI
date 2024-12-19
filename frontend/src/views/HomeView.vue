@@ -166,7 +166,7 @@
         position: relative;
 
         &::before {
-          content: "→";
+          content: '→';
           position: absolute;
           left: 0;
           color: #1a73e8;

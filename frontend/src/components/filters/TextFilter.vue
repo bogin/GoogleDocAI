@@ -13,18 +13,18 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: "TextSearchFilter",
+  name: 'TextSearchFilter',
 
   props: {
     modelValue: {
       type: String,
-      default: "",
+      default: '',
     },
   },
 
-  emits: ["update:modelValue"],
-});
+  emits: ['update:modelValue'],
+})
 </script>

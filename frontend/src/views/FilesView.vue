@@ -9,7 +9,7 @@
       <div class="actions">
         <button class="sync-btn" @click="fetchFiles" :disabled="loading">
           <span class="icon">🔄</span>
-          {{ loading ? "Syncing..." : "Sync Files" }}
+          {{ loading ? 'Syncing...' : 'Sync Files' }}
         </button>
       </div>
     </div>
@@ -77,144 +77,144 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, computed, onMounted } from "vue";
-import { useStore } from "vuex";
-import TextFilter from "@/components/filters/TextFilter.vue";
-import DateFilter from "@/components/filters/DateFilter.vue";
-import FilesTable from "@/components/FilesTable.vue";
-import AppPagination from "@/components/AppPagination.vue";
+import { defineComponent, ref, computed, onMounted } from 'vue'
+import { useStore } from 'vuex'
+import TextFilter from '@/components/filters/TextFilter.vue'
+import DateFilter from '@/components/filters/DateFilter.vue'
+import FilesTable from '@/components/FilesTable.vue'
+import AppPagination from '@/components/AppPagination.vue'
 
 export default defineComponent({
-  name: "FilesView",
+  name: 'FilesView',
   components: { TextFilter, DateFilter, FilesTable, AppPagination },
 
   setup() {
-    const store = useStore();
-    const pageSize = ref(10);
-    const currentPage = ref(1);
+    const store = useStore()
+    const pageSize = ref(10)
+    const currentPage = ref(1)
     const filters = ref({
-      query: "",
+      query: '',
       modifiedAfter: null as string | null,
-    });
+    })
 
     // Computed properties
-    const files = computed(() => store.state.files.items);
-    const loading = computed(() => store.state.files.loading);
-    const pagination = computed(() => store.state.files.pagination);
+    const files = computed(() => store.state.files.items)
+    const loading = computed(() => store.state.files.loading)
+    const pagination = computed(() => store.state.files.pagination)
 
     const visiblePageNumbers = computed(() => {
-      const current = pagination.value.currentPage;
-      const total = pagination.value.totalPages;
-      const delta = 2;
-      const left = current - delta;
-      const right = current + delta + 1;
-      const range = [];
-      const rangeWithDots = [];
-      let l;
+      const current = pagination.value.currentPage
+      const total = pagination.value.totalPages
+      const delta = 2
+      const left = current - delta
+      const right = current + delta + 1
+      const range = []
+      const rangeWithDots = []
+      let l
 
       for (let i = 1; i <= total; i++) {
         if (i === 1 || i === total || (i >= left && i < right)) {
-          range.push(i);
+          range.push(i)
         }
       }
 
       for (let i of range) {
         if (l) {
           if (i - l === 2) {
-            rangeWithDots.push(l + 1);
+            rangeWithDots.push(l + 1)
           } else if (i - l !== 1) {
-            rangeWithDots.push("...");
+            rangeWithDots.push('...')
           }
         }
-        rangeWithDots.push(i);
-        l = i;
+        rangeWithDots.push(i)
+        l = i
       }
 
-      return rangeWithDots;
-    });
+      return rangeWithDots
+    })
 
     const hasActiveFilters = computed(() =>
       Boolean(filters.value.query || filters.value.modifiedAfter)
-    );
+    )
 
     // Methods
     const fetchFiles = () => {
-      console.log("currentPage", currentPage.value);
-      console.log("pagination", pagination.value);
-      console.log("pageSize", pageSize.value);
-      store.dispatch("files/fetchFiles", {
+      console.log('currentPage', currentPage.value)
+      console.log('pagination', pagination.value)
+      console.log('pageSize', pageSize.value)
+      store.dispatch('files/fetchFiles', {
         page: currentPage.value,
         size: pageSize.value,
         filters: filters.value,
         pagination: pagination.value,
-      });
-    };
+      })
+    }
 
     const changePage = (page: number) => {
       if (page > 0 && page <= pagination.value.totalPages) {
-        currentPage.value = page;
-        fetchFiles();
+        currentPage.value = page
+        fetchFiles()
       }
-    };
+    }
 
     const handlePageSizeChange = (value: number) => {
-      pageSize.value = value;
-      fetchFiles();
-    };
+      pageSize.value = value
+      fetchFiles()
+    }
 
     const updateTextFilter = (value: string) => {
-      filters.value.query = value;
-      currentPage.value = 1;
-      fetchFiles();
-    };
+      filters.value.query = value
+      currentPage.value = 1
+      fetchFiles()
+    }
 
     const updateDateFilter = (value: string | null) => {
-      filters.value.modifiedAfter = value;
-      currentPage.value = 1;
-      fetchFiles();
-    };
+      filters.value.modifiedAfter = value
+      currentPage.value = 1
+      fetchFiles()
+    }
 
     const clearTextFilter = () => {
-      filters.value.query = "";
-      currentPage.value = 1;
-      fetchFiles();
-    };
+      filters.value.query = ''
+      currentPage.value = 1
+      fetchFiles()
+    }
 
     const clearDateFilter = () => {
-      filters.value.modifiedAfter = null;
-      currentPage.value = 1;
-      fetchFiles();
-    };
+      filters.value.modifiedAfter = null
+      currentPage.value = 1
+      fetchFiles()
+    }
 
     const formatDate = (date: string | null) => {
-      return date ? new Date(date).toLocaleDateString() : "";
-    };
+      return date ? new Date(date).toLocaleDateString() : ''
+    }
 
     const handleDelete = async (fileId: string) => {
       try {
-        await store.dispatch("files/deleteFile", fileId);
-        fetchFiles();
+        await store.dispatch('files/deleteFile', fileId)
+        fetchFiles()
       } catch (error) {
-        console.error("Failed to delete file:", error);
+        console.error('Failed to delete file:', error)
       }
-    };
+    }
 
     const handleEdit = async ({
       fileId,
       data,
     }: {
-      fileId: string;
-      data: Partial<File>;
+      fileId: string
+      data: Partial<File>
     }) => {
       try {
-        await store.dispatch("files/updateFile", { fileId, data });
-        fetchFiles();
+        await store.dispatch('files/updateFile', { fileId, data })
+        fetchFiles()
       } catch (error) {
-        console.error("Failed to update file:", error);
+        console.error('Failed to update file:', error)
       }
-    };
+    }
 
-    onMounted(fetchFiles);
+    onMounted(fetchFiles)
 
     return {
       files,
@@ -235,9 +235,9 @@ export default defineComponent({
       changePage,
       handleDelete,
       handleEdit,
-    };
+    }
   },
-});
+})
 </script>
 
 <style lang="scss" scoped>

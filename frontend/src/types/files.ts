@@ -1,29 +1,29 @@
 export interface Owner {
-  name: string;
+  name: string
 }
 
 export interface File {
-  id: string;
-  name: string;
-  size: number;
-  modifiedTime: string;
-  owners: Owner[];
+  id: string
+  name: string
+  size: number
+  modifiedTime: string
+  owners: Owner[]
 }
 
 export interface FilesState {
-  items: File[];
-  currentFile: File | null;
-  loading: boolean;
-  error: string | null;
+  items: File[]
+  currentFile: File | null
+  loading: boolean
+  error: string | null
   pagination: {
-    currentPage: 1;
-    pageSize: 10;
-    totalItems: 0;
-    totalPages: 0;
-    hasNextPage: false;
-  };
+    currentPage: 1
+    pageSize: 10
+    totalItems: 0
+    totalPages: 0
+    hasNextPage: false
+  }
 }
 
 export interface RootState {
-  files: FilesState;
+  files: FilesState
 }

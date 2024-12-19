@@ -23,7 +23,7 @@
                   </el-tooltip>
                 </div>
               </td>
-              <td>{{ file.owner || "Unknown" }}</td>
+              <td>{{ file.owner || 'Unknown' }}</td>
               <td>{{ formatDate(file.modifiedTime) }}</td>
               <td>{{ formatSize(file.size) }}</td>
               <td class="actions">
@@ -87,12 +87,12 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from "vue";
-import { useRouter } from "vue-router";
-import { File } from "@/types/files";
+import { defineComponent, ref, PropType } from 'vue'
+import { useRouter } from 'vue-router'
+import { File } from '@/types/files'
 
 export default defineComponent({
-  name: "FilesTable",
+  name: 'FilesTable',
 
   props: {
     files: {
@@ -101,71 +101,71 @@ export default defineComponent({
     },
   },
 
-  emits: ["delete", "update"],
+  emits: ['delete', 'update'],
 
   setup(props, { emit }) {
-    const router = useRouter();
-    const showEditModal = ref(false);
-    const showDeleteModal = ref(false);
-    const editingFile = ref<Partial<File>>({});
-    const deletingFileId = ref<string | null>(null);
+    const router = useRouter()
+    const showEditModal = ref(false)
+    const showDeleteModal = ref(false)
+    const editingFile = ref<Partial<File>>({})
+    const deletingFileId = ref<string | null>(null)
 
     const formatDate = (date: string): string => {
-      return new Date(date).toLocaleString();
-    };
+      return new Date(date).toLocaleString()
+    }
 
     const formatSize = (bytes: number): string => {
-      if (!bytes) return "N/A";
-      const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-      const i = Math.floor(Math.log(bytes) / Math.log(1024));
-      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
-    };
+      if (!bytes) return 'N/A'
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+      const i = Math.floor(Math.log(bytes) / Math.log(1024))
+      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
+    }
 
     const handleEdit = (file: File) => {
-      editingFile.value = { ...file };
-      showEditModal.value = true;
-    };
+      editingFile.value = { ...file }
+      showEditModal.value = true
+    }
 
     const handleDelete = (fileId: string) => {
-      deletingFileId.value = fileId;
-      showDeleteModal.value = true;
-    };
+      deletingFileId.value = fileId
+      showDeleteModal.value = true
+    }
 
     const handleView = (fileId: string) => {
-      router.push(`/files/${fileId}`);
-    };
+      router.push(`/files/${fileId}`)
+    }
 
     const saveEdit = () => {
       if (editingFile.value.id) {
-        emit("update", {
+        emit('update', {
           fileId: editingFile.value.id,
           data: editingFile.value,
-        });
+        })
       }
-      showEditModal.value = false;
-    };
+      showEditModal.value = false
+    }
 
     const cancelEdit = () => {
-      showEditModal.value = false;
-      editingFile.value = {};
-    };
+      showEditModal.value = false
+      editingFile.value = {}
+    }
 
     const confirmDelete = () => {
       if (deletingFileId.value) {
-        emit("delete", deletingFileId.value);
+        emit('delete', deletingFileId.value)
       }
-      showDeleteModal.value = false;
-      deletingFileId.value = null;
-    };
+      showDeleteModal.value = false
+      deletingFileId.value = null
+    }
 
     const cancelDelete = () => {
-      showDeleteModal.value = false;
-      deletingFileId.value = null;
-    };
+      showDeleteModal.value = false
+      deletingFileId.value = null
+    }
 
     const truncatedFileName = (name: string) => {
-      return name.length > 10 ? name.substring(0, 10) + "..." : name;
-    };
+      return name.length > 10 ? name.substring(0, 10) + '...' : name
+    }
 
     return {
       truncatedFileName,
@@ -181,9 +181,9 @@ export default defineComponent({
       cancelDelete,
       formatDate,
       formatSize,
-    };
+    }
   },
-});
+})
 </script>
 
 <style lang="scss" scoped>

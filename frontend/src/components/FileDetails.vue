@@ -23,7 +23,7 @@
 
         <div class="detail-item">
           <label>Owner:</label>
-          <span>{{ file.owners?.[0]?.name || "Unknown" }}</span>
+          <span>{{ file.owners?.[0]?.name || 'Unknown' }}</span>
         </div>
       </div>
 
@@ -39,11 +39,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, PropType } from "vue";
-import { File } from "@/types/files";
+import { defineComponent, PropType } from 'vue'
+import { File } from '@/types/files'
 
 export default defineComponent({
-  name: "FileDetails",
+  name: 'FileDetails',
 
   props: {
     file: {
@@ -56,7 +56,7 @@ export default defineComponent({
     },
     error: {
       type: String,
-      default: "",
+      default: '',
     },
   },
 
@@ -67,17 +67,17 @@ export default defineComponent({
 
   methods: {
     formatSize(bytes: number): string {
-      if (!bytes) return "N/A";
-      const sizes = ["Bytes", "KB", "MB", "GB", "TB"];
-      const i = Math.floor(Math.log(bytes) / Math.log(1024));
-      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
+      if (!bytes) return 'N/A'
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
+      const i = Math.floor(Math.log(bytes) / Math.log(1024))
+      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
     },
 
     formatDate(date: string): string {
-      return new Date(date).toLocaleString();
+      return new Date(date).toLocaleString()
     },
   },
-});
+})
 </script>
 
 <style lang="scss" scoped>

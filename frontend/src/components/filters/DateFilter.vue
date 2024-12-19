@@ -20,10 +20,10 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from "vue";
+import { defineComponent } from 'vue'
 
 export default defineComponent({
-  name: "DateFilter",
+  name: 'DateFilter',
 
   props: {
     startDate: {
@@ -32,21 +32,21 @@ export default defineComponent({
     },
   },
 
-  emits: ["update:modelValue"],
+  emits: ['update:modelValue'],
 
   methods: {
     handleDateChange(event: Event) {
-      const input = event.target as HTMLInputElement;
+      const input = event.target as HTMLInputElement
       // Emit the new date value
-      this.$emit("update:modelValue", input.value || null);
+      this.$emit('update:modelValue', input.value || null)
     },
 
     clearDate() {
       // Emit null to clear the date
-      this.$emit("update:modelValue", null);
+      this.$emit('update:modelValue', null)
     },
   },
-});
+})
 </script>
 
 <style scoped>

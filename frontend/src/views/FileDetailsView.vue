@@ -16,55 +16,55 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, computed } from "vue";
-import { useStore } from "vuex";
-import { useRouter, useRoute } from "vue-router";
-import FileDetails from "@/components/files/FileDetails.vue";
-import { File } from "@/types/files";
+import { defineComponent, computed } from 'vue'
+import { useStore } from 'vuex'
+import { useRouter, useRoute } from 'vue-router'
+import FileDetails from '@/components/files/FileDetails.vue'
+import { File } from '@/types/files'
 
 export default defineComponent({
-  name: "FileDetailsView",
+  name: 'FileDetailsView',
 
   components: {
     FileDetails,
   },
 
   setup() {
-    const store = useStore();
-    const router = useRouter();
-    const route = useRoute();
+    const store = useStore()
+    const router = useRouter()
+    const route = useRoute()
 
     // Load the file details when component mounts
-    store.dispatch("files/fetchFileById", route.params.id);
+    store.dispatch('files/fetchFileById', route.params.id)
 
-    const currentFile = computed(() => store.state.files.currentFile);
-    const loading = computed(() => store.state.files.loading);
-    const error = computed(() => store.state.files.error);
+    const currentFile = computed(() => store.state.files.currentFile)
+    const loading = computed(() => store.state.files.loading)
+    const error = computed(() => store.state.files.error)
 
-    const goBack = () => router.push("/files");
+    const goBack = () => router.push('/files')
 
     const handleEdit = async (file: File) => {
       try {
-        await store.dispatch("files/updateFile", {
+        await store.dispatch('files/updateFile', {
           fileId: file.id,
           data: file,
-        });
-        goBack();
+        })
+        goBack()
       } catch (error) {
-        console.error("Failed to update file:", error);
+        console.error('Failed to update file:', error)
       }
-    };
+    }
 
     const handleDelete = async (fileId: string) => {
-      if (confirm("Are you sure you want to delete this file?")) {
+      if (confirm('Are you sure you want to delete this file?')) {
         try {
-          await store.dispatch("files/deleteFile", fileId);
-          goBack();
+          await store.dispatch('files/deleteFile', fileId)
+          goBack()
         } catch (error) {
-          console.error("Failed to delete file:", error);
+          console.error('Failed to delete file:', error)
         }
       }
-    };
+    }
 
     return {
       currentFile,
@@ -73,9 +73,9 @@ export default defineComponent({
       goBack,
       handleEdit,
       handleDelete,
-    };
+    }
   },
-});
+})
 </script>
 
 <style lang="scss" scoped>

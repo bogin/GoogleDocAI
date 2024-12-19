@@ -55,8 +55,8 @@
 </template>
 
 <script setup>
-import { computed, ref, watch, defineProps, defineEmits } from "vue";
-import { ChevronLeftIcon, ChevronRightIcon } from "lucide-vue-next";
+import { computed, ref, watch, defineProps, defineEmits } from 'vue'
+import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 
 const props = defineProps({
   pagination: {
@@ -67,75 +67,75 @@ const props = defineProps({
     type: Number,
     default: 10,
   },
-});
+})
 
-const emit = defineEmits(["page-change", "size-change"]);
+const emit = defineEmits(['page-change', 'size-change'])
 
-const localPageSize = ref(props.pageSize);
+const localPageSize = ref(props.pageSize)
 
 const startItem = computed(
   () => (props.pagination.currentPage - 1) * props.pagination.pageSize + 1
-);
+)
 
 const endItem = computed(() =>
   Math.min(
     props.pagination.currentPage * props.pagination.pageSize,
     props.pagination.totalItems
   )
-);
+)
 
 const visiblePages = computed(() => {
-  const current = props.pagination.currentPage;
-  const total = props.pagination.totalPages;
-  const delta = 2;
+  const current = props.pagination.currentPage
+  const total = props.pagination.totalPages
+  const delta = 2
 
   if (total <= 7) {
-    return Array.from({ length: total }, (_, i) => i + 1);
+    return Array.from({ length: total }, (_, i) => i + 1)
   }
 
-  const left = current - delta;
-  const right = current + delta;
-  const range = [];
-  const rangeWithDots = [];
-  let l;
+  const left = current - delta
+  const right = current + delta
+  const range = []
+  const rangeWithDots = []
+  let l
 
   for (let i = 1; i <= total; i++) {
     if (i === 1 || i === total || (i >= left && i < right)) {
-      range.push(i);
+      range.push(i)
     }
   }
 
   for (let i of range) {
     if (l) {
       if (i - l === 2) {
-        rangeWithDots.push(l + 1);
+        rangeWithDots.push(l + 1)
       } else if (i - l !== 1) {
-        rangeWithDots.push("...");
+        rangeWithDots.push('...')
       }
     }
-    rangeWithDots.push(i);
-    l = i;
+    rangeWithDots.push(i)
+    l = i
   }
 
-  return rangeWithDots;
-});
+  return rangeWithDots
+})
 
 const changePage = (page) => {
   if (page > 0 && page <= props.pagination.totalPages) {
-    emit("page-change", page);
+    emit('page-change', page)
   }
-};
+}
 
 const handlePageSizeChange = () => {
-  emit("size-change", Number(localPageSize.value));
-};
+  emit('size-change', Number(localPageSize.value))
+}
 
 watch(
   () => props.pageSize,
   (newSize) => {
-    localPageSize.value = newSize;
+    localPageSize.value = newSize
   }
-);
+)
 </script>
 
 <style scoped>
