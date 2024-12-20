@@ -1,44 +1,71 @@
 const { File } = require('../models');
 const { Op } = require('sequelize');
+const openaiService = require('../services/openai.service');
 
 class FilesRepository {
-    async findAll({ page = 1, size = 10, query, filters }) {
-        const whereConditions = {};
 
-        // Handle query search across multiple fields
-        if (query) {
-            whereConditions[Op.or] = [
-                { name: { [Op.iLike]: `%${query}%` } },
-                { owner: { [Op.iLike]: `%${query}%` } }
-            ];
-        }
+    async findAll({ page = 1, size = 10, query, filters = {} }) {
+        try {
+            // Base query configuration
+            let queryConfig = {
+                where: {},
+                limit: size,
+                offset: (page - 1) * size,
+                order: [['modifiedTime', 'DESC']],
+            };
 
-        // Handle additional filters
-        if (filters) {
+            // Add modifiedAfter filter directly to queryConfig (don't pass to AI)
             if (filters.modifiedAfter) {
-                whereConditions.modifiedTime = {
-                    [Op.gte]: new Date(filters.modifiedAfter)
+                queryConfig.where.modifiedTime = {
+                    [Op.gte]: new Date(filters.modifiedAfter),
                 };
             }
-        }
 
-        const { count, rows: files } = await File.findAndCountAll({
-            where: whereConditions,
-            limit: size,
-            offset: (page - 1) * size,
-            order: [['modifiedTime', 'DESC']]
-        });
+            // If a query string exists, use the AI service to generate a query
+            if (filters?.query) {
+                try {
+                    const aiQueryConfig = await openaiService.generateQuery({
+                        query: filters.query,
+                        page,
+                        size,
+                        baseConfig: queryConfig, // Pass only baseConfig and query
+                    });
 
-        return {
-            files,
-            pagination: {
-                currentPage: page,
-                pageSize: size,
-                totalItems: count,
-                totalPages: Math.ceil(count / size),
-                hasNextPage: page * size < count
+                    // Merge the AI query with the baseConfig here, not inside AI service
+                    queryConfig = {
+                        ...queryConfig,  // Retain all properties from the base config
+
+                        where: {
+                            [Op.and]: [
+                                queryConfig.where,      // Base 'where' conditions
+                                aiQueryConfig.where,    // AI-generated 'where' conditions
+                            ],
+                        },
+
+                        // Merge 'order' (if AI has no order, use the default)
+                        order: aiQueryConfig.order || queryConfig.order,
+                    };
+                } catch (error) {
+                    throw new Error(`Invalid query parameters: ${error.message}`);
+                }
             }
-        };
+
+            // Execute the query
+            const { count, rows: files } = await File.findAndCountAll(queryConfig);
+
+            return {
+                files,
+                pagination: {
+                    currentPage: page,
+                    pageSize: size,
+                    totalItems: count,
+                    totalPages: Math.ceil(count / size),
+                    hasNextPage: page * size < count,
+                },
+            };
+        } catch (error) {
+            throw new Error(`Failed to find files: ${error.message}`);
+        }
     }
 
     async findById(fileId) {

@@ -1,29 +1,50 @@
 const { File } = require('../models');
 const { Op } = require('sequelize');
+const EventEmitter = require('events');
 
-class SyncQueue {
+class SyncQueue extends EventEmitter {
     constructor() {
+        super();
         this.queue = [];
         this.isProcessing = false;
         this.lastCheckTime = null;
         this.monitorInterval = null;
         this.isInitialized = false;
+        this.taskProcessor = null;
+        this.waitForAuthPromise = null;
+        this.authResolver = null;
+    }
+
+    async waitForAuth() {
+        if (this.isInitialized) return true;
+        
+        if (!this.waitForAuthPromise) {
+            this.waitForAuthPromise = new Promise(resolve => {
+                this.authResolver = resolve;
+            });
+        }
+        
+        return this.waitForAuthPromise;
     }
 
     setInitialized(value) {
         this.isInitialized = value;
-        if (value && !this.monitorInterval) {
-            this.startMonitoring();
+        if (value) {
+            if (this.authResolver) {
+                this.authResolver(true);
+            }
+            if (!this.monitorInterval) {
+                this.startMonitoring();
+            }
         }
     }
 
     startMonitoring() {
-        // Run monitor every minute
-        this.monitorInterval = setInterval(() => {
+        this.monitorInterval = setInterval(async () => {
             if (this.isInitialized) {
-                this.checkForChanges();
+                await this.checkForChanges();
             }
-        }, 60 * 1000); // 1 minute
+        }, 60 * 1000);
     }
 
     stopMonitoring() {
@@ -34,9 +55,11 @@ class SyncQueue {
     }
 
     async checkForChanges() {
-        try {
+        if (!this.isInitialized) {
+            await this.waitForAuth();
+        }
 
-            // Find files modified since last check
+        try {
             const modifiedFiles = await File.findAll({
                 where: {
                     [Op.or]: [
@@ -68,6 +91,7 @@ class SyncQueue {
     }
 
     async addToQueue(task) {
+        await this.waitForAuth();
         this.queue.push(task);
         if (!this.isProcessing) {
             await this.processQueue();
@@ -79,28 +103,22 @@ class SyncQueue {
 
         this.isProcessing = true;
         try {
-            const task = this.queue.shift();
-            await this.processTask(task);
+            while (this.queue.length > 0) {
+                const task = this.queue.shift();
+                if (this.taskProcessor) {
+                    await this.taskProcessor(task);
+                }
+            }
         } catch (error) {
-            console.error('Error processing task:', error);
+            console.error('Error processing queue:', error);
         } finally {
             this.isProcessing = false;
-            if (this.queue.length > 0) {
-                await this.processQueue();
-            }
         }
     }
 
-    async processTask(task) {
-        if (this.taskProcessor) {
-            await this.taskProcessor(task);
-        }
-    }
-
-    setTaskProcessor(processor) {
+    setProcessor(processor) {
         this.taskProcessor = processor;
     }
 }
 
-const queue = new SyncQueue();
-module.exports = queue;
+module.exports = new SyncQueue();
