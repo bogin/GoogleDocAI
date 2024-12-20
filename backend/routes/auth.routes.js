@@ -1,7 +1,7 @@
 const express = require('express');
 const googleService = require('../services/google.service');
 const etlService = require('../services/etl.service');
-const queue = require('../services/queue.service');
+const smartQueue = require('../queue/smart.queue');
 
 const router = express.Router();
 
@@ -17,7 +17,8 @@ router.get('/google/callback', async (req, res) => {
     const auth = googleService.getAuth();
     if (auth) {
       etlService.setAuth(auth);
-      queue.setInitialized(true);
+      smartQueue.setInitialized(true);
+      console.log('Successfully authenticated and initialized services');
     }
     res.send('Authentication successful! You can close this window.');
   } catch (error) {
@@ -25,5 +26,6 @@ router.get('/google/callback', async (req, res) => {
     res.status(500).send('Authentication failed');
   }
 });
+
 
 module.exports = router;

@@ -1,65 +1,75 @@
 require('dotenv').config();
-const validateDatabaseConnection = require('./services/db.service');
+const validateDatabaseConnection = require('./services/postgres.db.service');
 const googleService = require('./services/google.service');
 const etlService = require('./services/etl.service');
-const syncQueue = require('./services/queue.service');
+const syncQueue = require('./queue/smart.queue');
+const fileProcessor = require('./queue/processor');
 
-async function startETLProcess() {
+async function startServer() {
     try {
-        // Initialize database
+        // First, validate database connection
         const isDbConnected = await validateDatabaseConnection();
         if (!isDbConnected) {
             throw new Error('Database connection failed');
         }
         console.log('Database connected successfully');
 
-        // Start initialization of services
-        const initPromise = etlService.initialize();
+        // Set up processor for queue
+        syncQueue.setProcessor(fileProcessor);
 
-        // Initialize Google Auth
+        // Try to authenticate first
         const auth = await googleService.initializeGoogleAuth();
+
         if (auth) {
+            // If auth successful, initialize services
             console.log('Google Auth initialized successfully');
             etlService.setAuth(auth);
             syncQueue.setInitialized(true);
             console.log('Services fully initialized with auth');
-        } else {
-            console.log('Waiting for authentication...');
 
-            // Listen for authentication events
-            googleService.on('authenticated', (auth) => {
+            // Start ETL after auth is confirmed
+            await etlService.initialize();
+            console.log('ETL Service initialization complete');
+        } else {
+            // If no auth, prepare services but don't start them
+            console.log('No auth available, initializing services in standby mode...');
+
+            // Initialize ETL in waiting mode
+            const etlInitPromise = etlService.initialize();
+
+            // Set up auth success listener
+            googleService.on('authenticated', async (newAuth) => {
                 console.log('Received authentication update');
-                etlService.setAuth(auth);
+                etlService.setAuth(newAuth);
                 syncQueue.setInitialized(true);
-                console.log('Services fully initialized with auth');
+                console.log('Services activated with new auth');
             });
+
+            // Wait for ETL to be ready (but not started)
+            await etlInitPromise;
+            console.log('Services initialized in standby mode');
         }
 
-        // Wait for initialization to complete
-        await initPromise;
-        console.log('ETL Service initialization complete');
-
-        // Handle process termination
+        // Set up graceful shutdown
         process.on('SIGTERM', gracefulShutdown);
         process.on('SIGINT', gracefulShutdown);
 
     } catch (error) {
-        console.error('Failed to start ETL process:', error);
+        console.error('Failed to start server:', error);
         process.exit(1);
     }
 }
 
-function gracefulShutdown() {
-    console.log('ETL process: Shutdown signal received');
+async function gracefulShutdown() {
+    console.log('Shutdown signal received');
+    syncQueue.stopMonitoring();
     if (etlService.authCheckInterval) {
         clearInterval(etlService.authCheckInterval);
     }
-    syncQueue.stopMonitoring();
     process.exit(0);
 }
 
-// Start the ETL process
-startETLProcess().catch(error => {
+startServer().catch(error => {
     console.error('Fatal error during ETL startup:', error);
     process.exit(1);
 });

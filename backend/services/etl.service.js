@@ -1,10 +1,10 @@
-const { Op } = require('sequelize');
+// src/services/etl.service.js
 const { File } = require('../models');
-const syncQueue = require('./queue.service');
-const { google } = require('googleapis');
-const { sequelize } = require('../models');
 const { SystemSetting } = require('../models');
+const { google } = require('googleapis');
+const { Op } = require('sequelize');
 const EventEmitter = require('events');
+const syncQueue = require('../queue/smart.queue');
 
 const SyncStatus = {
     PENDING: 'pending',
@@ -19,26 +19,21 @@ class ETLService extends EventEmitter {
         super();
         this.drive = null;
         this.lastSyncTime = null;
-        this.maxRetries = 3;
-        this.isSyncing = false;
-        this.syncQueue = syncQueue;
-        this.syncQueue.setTaskProcessor(this.processTask.bind(this));
         this.isInitialized = false;
         this.authCheckInterval = null;
+        this.isSyncing = false;
+        this.maxRetries = 3;
     }
 
     async initialize() {
-        // Start periodic sync without waiting for auth
         this.startPeriodicSync().catch(console.error);
-
-        // Set up auth check interval
+        
         this.authCheckInterval = setInterval(() => {
             if (!this.isInitialized) {
                 console.log('Waiting for auth...');
             }
         }, 5000);
 
-        // Listen for initialization
         return new Promise((resolve) => {
             if (this.isInitialized) {
                 resolve();
@@ -50,7 +45,7 @@ class ETLService extends EventEmitter {
 
     setAuth(auth) {
         if (!auth) return;
-
+        
         this.drive = google.drive({ version: 'v3', auth });
         this.isInitialized = true;
         this.emit('initialized');
@@ -59,33 +54,17 @@ class ETLService extends EventEmitter {
             clearInterval(this.authCheckInterval);
             this.authCheckInterval = null;
         }
-    }
 
-    async waitForAuth() {
-        if (this.isInitialized) return;
-
-        return new Promise((resolve) => {
-            const checkAuth = setInterval(() => {
-                if (this.isInitialized) {
-                    clearInterval(checkAuth);
-                    resolve();
-                }
-            }, 3000); // Check every second
-        });
+        syncQueue.setInitialized(true);
     }
 
     async loadLastSyncTime() {
-        await this.waitForAuth();
         try {
             const setting = await SystemSetting.findOne({
                 where: { key: 'lastSyncTime' }
             });
 
-            if (setting?.value?.time) {
-                this.lastSyncTime = new Date(setting.value.time);
-            } else {
-                this.lastSyncTime = null;
-            }
+            this.lastSyncTime = setting?.value?.time ? new Date(setting.value.time) : null;
         } catch (error) {
             console.error('Error loading last sync time:', error);
             this.lastSyncTime = null;
@@ -138,22 +117,24 @@ class ETLService extends EventEmitter {
     }
 
     async checkForNewFiles() {
+        if (!this.isInitialized) return;
+
         try {
             let pageToken = null;
             const query = this.lastSyncTime
                 ? `modifiedTime > '${this.lastSyncTime.toISOString()}' and mimeType = 'application/vnd.google-apps.document'`
-                : 'mimeType = \'application/vnd.google-apps.document\'';
+                : "mimeType = 'application/vnd.google-apps.document'";
 
             do {
                 const response = await this.drive.files.list({
                     pageSize: 100,
                     pageToken,
                     q: query,
-                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, owners, size, webViewLink, description, createdTime, iconLink, shared, sharingUser, lastModifyingUser, permissions, thumbnailLink, exportLinks, webContentLink, originalFilename, version, capabilities, trashed, capabilities(canEdit, canShare, canCopy))'
+                    fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, owners, size, webViewLink, iconLink, shared, lastModifyingUser, permissions, version, capabilities, trashed)'
                 });
 
                 if (response.data.files.length > 0) {
-                    await this.syncQueue.addToQueue({
+                    await syncQueue.addToQueue({
                         type: 'BULK_SYNC',
                         files: response.data.files
                     });
@@ -166,39 +147,6 @@ class ETLService extends EventEmitter {
         } catch (error) {
             console.error('Failed to check for new files:', error);
         }
-    }
-
-    async startPeriodicSync() {
-        if (this.auth) {
-            this.setAuth(this.auth);
-        }
-
-        await this.waitForAuth();
-        await this.loadLastSyncTime();
-
-        // First, check for modified files and mark as stale if needed
-        const modifiedFiles = await this.checkForModifiedFiles();
-        if (modifiedFiles?.data?.files?.length > 0) {
-            await File.update(
-                { sync_status: 'stale' },
-                {
-                    where: {
-                        id: { [Op.in]: modifiedFiles.data.files.map(f => f.id) }
-                    }
-                }
-            );
-        }
-
-        // Then start your existing periodic sync
-        await this.checkForNewFiles();
-        await this.syncFiles();
-
-        setInterval(async () => {
-            if (this.isInitialized) {
-                await this.checkForNewFiles();
-                await this.syncFiles();
-            }
-        }, 1 * 60 * 1000);
     }
 
     async checkForModifiedFiles() {
@@ -216,6 +164,35 @@ class ETLService extends EventEmitter {
         }
     }
 
+    async startPeriodicSync() {
+        await this.loadLastSyncTime();
+
+        // First, check for modified files and mark as stale if needed
+        const modifiedFiles = await this.checkForModifiedFiles();
+        if (modifiedFiles?.data?.files?.length > 0) {
+            await File.update(
+                { sync_status: 'stale' },
+                {
+                    where: {
+                        id: { [Op.in]: modifiedFiles.data.files.map(f => f.id) }
+                    }
+                }
+            );
+        }
+
+        // Initial sync
+        await this.checkForNewFiles();
+        await this.syncFiles();
+
+        // Run periodic sync
+        setInterval(async () => {
+            if (this.isInitialized) {
+                await this.checkForNewFiles();
+                await this.syncFiles();
+            }
+        }, 60 * 1000);
+    }
+
     async syncFiles(retryCount = 0) {
         if (this.isSyncing) {
             console.log('Sync already in progress');
@@ -224,7 +201,6 @@ class ETLService extends EventEmitter {
 
         this.isSyncing = true;
         try {
-            // Get files that need syncing
             const filesToSync = await File.findAll({
                 where: {
                     [Op.or]: [
@@ -241,8 +217,7 @@ class ETLService extends EventEmitter {
             });
 
             if (filesToSync.length > 0) {
-                // Add to queue as a batch
-                await this.syncQueue.addToQueue({
+                await syncQueue.addToQueue({
                     type: 'RETRY_SYNC',
                     files: filesToSync
                 });
@@ -258,75 +233,6 @@ class ETLService extends EventEmitter {
         }
     }
 
-    async processTask(task) {
-        const { type, files } = task;
-        const results = { success: 0, failed: 0, errors: [] };
-
-        try {
-            const batchSize = 500;
-            for (let i = 0; i < files.length; i += batchSize) {
-                const batch = files.slice(i, i + batchSize);
-
-                await Promise.all(batch.map(async (fileData) => {
-                    try {
-                        if (type === 'RETRY_SYNC') {
-                            const fileModel = fileData instanceof File ?
-                                fileData :
-                                File.build(fileData);
-                            await this.syncSingleFile(fileModel);
-                        } else {
-                            const res = await File.upsert({
-                                id: fileData.id,
-                                name: fileData.name,
-                                mimeType: fileData.mimeType,
-                                iconLink: fileData.iconLink,
-                                webViewLink: fileData.webViewLink,
-                                size: fileData.size,
-                                shared: fileData.shared,
-                                trashed: fileData.trashed,
-                                createdTime: new Date(fileData.createdTime),
-                                modifiedTime: new Date(fileData.modifiedTime),
-                                version: fileData.version,
-                                owner: fileData.owners?.[0],
-                                lastModifyingUser: fileData.lastModifyingUser,
-                                permissions: fileData.permissions,
-                                capabilities: fileData.capabilities,
-                                metadata: fileData, // Store complete raw response
-                                syncStatus: SyncStatus.SUCCESS,
-                                lastSyncAttempt: new Date()
-                            });
-                        }
-                        results.success++;
-                    } catch (error) {
-                        results.failed++;
-                        results.errors.push({
-                            fileId: fileData.id,
-                            error: error.message
-                        });
-
-                        await File.upsert({
-                            id: fileData.id,
-                            metadata: fileData,
-                            sync_status: SyncStatus.ERROR,
-                            last_sync_attempt: new Date(),
-                            error_log: {
-                                error: error.message,
-                                timestamp: new Date(),
-                                details: error.stack
-                            }
-                        });
-                    }
-                }));
-            }
-
-            return results;
-
-        } catch (error) {
-            console.error('Task processing failed:', error);
-            throw error;
-        }
-    }
-
     async syncSingleFile(file) {
         try {
             await file.update({
@@ -339,7 +245,7 @@ class ETLService extends EventEmitter {
                 fields: '*'
             });
 
-            await file.update({
+            const updatedData = {
                 name: response.data.name,
                 mimeType: response.data.mimeType,
                 modifiedTime: new Date(response.data.modifiedTime),
@@ -348,9 +254,11 @@ class ETLService extends EventEmitter {
                 metadata: response.data,
                 sync_status: 'success',
                 error_log: null
-            });
+            };
+
+            await file.update(updatedData);
         } catch (error) {
-            throw new Error(`Failed to sync file ${file.id}: ${error.message}`);
+            await this.handleSyncError(file, error);
         }
     }
 
@@ -370,5 +278,4 @@ class ETLService extends EventEmitter {
     }
 }
 
-const etlService = new ETLService();
-module.exports = etlService;
+module.exports = new ETLService();
