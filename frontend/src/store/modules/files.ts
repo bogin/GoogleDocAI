@@ -85,7 +85,6 @@ const files: Module<FilesState, RootState> = {
           'SET_ERROR',
           error instanceof Error ? error.message : 'Unknown error'
         )
-        throw error
       } finally {
         commit('SET_LOADING', false)
       }
@@ -124,7 +123,7 @@ const files: Module<FilesState, RootState> = {
       { fileId, data }: { fileId: string; data: Partial<File> }
     ) {
       try {
-        await axios.patch(`/files/${fileId}`, data)
+        await axios.put(`/files/${fileId}`, data)
         return dispatch('fetchFiles', { page: 1 })
       } catch (error) {
         console.error('Failed to update file:', error)

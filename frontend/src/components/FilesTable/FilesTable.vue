@@ -40,6 +40,14 @@
                 <template v-if="column.key === 'actions'">
                   <div class="actions">
                     <button
+                      v-if="file.webViewLink"
+                      class="btn btn-copy"
+                      @click="copyLink(file.webViewLink)"
+                      title="Copy Link"
+                    >
+                      📋
+                    </button>
+                    <button
                       class="btn btn-edit"
                       @click="handleEdit(file)"
                       title="Edit"
@@ -67,21 +75,6 @@
       </div>
     </div>
 
-    <!-- Edit Modal -->
-    <div v-if="showEditModal" class="modal">
-      <div class="modal-content">
-        <h3>Edit File</h3>
-        <div class="form-group">
-          <label>Name:</label>
-          <input v-model="editingFile.name" type="text" />
-        </div>
-        <div class="modal-actions">
-          <button @click="saveEdit" class="btn btn-primary">Save</button>
-          <button @click="cancelEdit" class="btn btn-secondary">Cancel</button>
-        </div>
-      </div>
-    </div>
-
     <!-- Delete Confirmation Modal -->
     <div v-if="showDeleteModal" class="modal">
       <div class="modal-content">
@@ -95,6 +88,25 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Notification -->
+    <AppToast
+      v-if="showToast"
+      :message="toastMessage"
+      :type="toastType"
+      @close="showToast = false"
+    />
+
+    <!-- Dynamic Form for Edit -->
+    <DynamicForm
+      v-if="showForm"
+      :show="showForm"
+      title="File"
+      :form-config="formConfig"
+      :initial-data="editingFile"
+      @update="handleFormSubmit"
+      @close="showForm = false"
+    />
   </div>
 </template>
 
@@ -103,12 +115,49 @@ import { defineComponent, ref, computed, PropType } from 'vue'
 import { File, Column } from '@/types/files'
 import { defaultColumns } from './configuration'
 import ColumnVisibilityToggle from './ColumnVisibilityToggle.vue'
+import AppToast from '../Toast.vue'
+import DynamicForm from '../DynamicForm.vue'
+import { FormField } from '@/types/formField'
+
+const formConfig: FormField[] = [
+  {
+    name: 'name',
+    label: 'File Name',
+    type: 'text',
+    required: true,
+    placeholder: 'Enter file name',
+  },
+  {
+    name: 'shared',
+    label: 'Shared',
+    type: 'checkbox',
+  },
+  {
+    name: 'mimeType',
+    label: 'File Type',
+    type: 'select',
+    options: [
+      { label: 'Document', value: 'application/vnd.google-apps.document' },
+      {
+        label: 'Spreadsheet',
+        value: 'application/vnd.google-apps.spreadsheet',
+      },
+      {
+        label: 'Presentation',
+        value: 'application/vnd.google-apps.presentation',
+      },
+    ],
+    required: true,
+  },
+]
 
 export default defineComponent({
   name: 'FilesTable',
 
   components: {
     ColumnVisibilityToggle,
+    AppToast,
+    DynamicForm,
   },
 
   props: {
@@ -121,9 +170,12 @@ export default defineComponent({
   emits: ['delete', 'update'],
 
   setup(props, { emit }) {
-    const showEditModal = ref(false)
+    const showToast = ref(false)
+    const toastMessage = ref('')
+    const toastType = ref('success')
     const showDeleteModal = ref(false)
-    const editingFile = ref<Partial<File>>({})
+    const showForm = ref(false)
+    const editingFile = ref<Partial<File> | null>(null)
     const deletingFileId = ref<string | null>(null)
     const columns = ref<Column[]>(defaultColumns)
     const sortConfig = ref({
@@ -164,30 +216,9 @@ export default defineComponent({
       return column.formatter ? column.formatter(value, file) : value
     }
 
-    const handleEdit = (file: File) => {
-      editingFile.value = { ...file }
-      showEditModal.value = true
-    }
-
     const handleDelete = (fileId: string) => {
       deletingFileId.value = fileId
       showDeleteModal.value = true
-    }
-
-    const saveEdit = () => {
-      if (editingFile.value.id) {
-        emit('update', {
-          fileId: editingFile.value.id,
-          data: editingFile.value,
-        })
-      }
-      showEditModal.value = false
-      editingFile.value = {}
-    }
-
-    const cancelEdit = () => {
-      showEditModal.value = false
-      editingFile.value = {}
     }
 
     const confirmDelete = () => {
@@ -203,16 +234,50 @@ export default defineComponent({
       deletingFileId.value = null
     }
 
+    const copyLink = async (link: string) => {
+      try {
+        await navigator.clipboard.writeText(link)
+        toastMessage.value = 'Link copied to clipboard!'
+        toastType.value = 'success'
+        showToast.value = true
+      } catch (err) {
+        toastMessage.value = 'Failed to copy link'
+        toastType.value = 'error'
+        showToast.value = true
+        console.error('Failed to copy link:', err)
+      }
+    }
+
+    const handleEdit = (file: File) => {
+      editingFile.value = { ...file }
+      showForm.value = true
+    }
+
+    const handleFormSubmit = async (formData: Partial<File>) => {
+      if (editingFile.value?.id) {
+        await emit('update', {
+          fileId: editingFile.value.id,
+          data: formData,
+        })
+      }
+      showForm.value = false
+      editingFile.value = null
+    }
+
     return {
-      showEditModal,
+      showToast,
+      toastMessage,
+      toastType,
       showDeleteModal,
       editingFile,
       columns,
       visibleColumns,
+      showForm,
+      formConfig,
       handleEdit,
+      handleFormSubmit,
+      copyLink,
       handleDelete,
-      saveEdit,
-      cancelEdit,
       confirmDelete,
       cancelDelete,
       updateColumns,
@@ -357,10 +422,36 @@ export default defineComponent({
     border-radius: 4px;
     cursor: pointer;
     background: transparent;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 
     &:hover {
       background: #f5f5f5;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    &.btn-copy {
+      &:hover {
+        background: #e6fffb;
+        color: #13c2c2;
+      }
+    }
+
+    &.btn-edit {
+      &:hover {
+        background: #e6f7ff;
+        color: #1890ff;
+      }
+    }
+
+    &.btn-delete {
+      &:hover {
+        background: #fff1f0;
+        color: #f5222d;
+      }
     }
   }
 }

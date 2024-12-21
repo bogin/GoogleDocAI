@@ -7,6 +7,32 @@ module.exports = (sequelize) => {
                 foreignKey: 'user_id',
                 as: 'user'
             });
+            File.hasMany(models.FileOwner, {
+                foreignKey: 'file_id',
+                as: 'fileOwners'
+            });
+        }
+
+        async safeDelete(userId) {
+            // Remove the user from file owners
+            await sequelize.models.FileOwner.destroy({
+                where: {
+                    fileId: this.id,
+                    userId: userId
+                }
+            });
+
+            // Check if any owners remain
+            const remainingOwners = await sequelize.models.FileOwner.count({
+                where: { fileId: this.id }
+            });
+
+            // If no owners remain, soft delete the file
+            if (remainingOwners === 0) {
+                return this.destroy();
+            }
+
+            return this;
         }
     }
 
@@ -99,6 +125,7 @@ module.exports = (sequelize) => {
         tableName: 'files',
         timestamps: true,
         underscored: true,
+        paranoid: true, // Enable soft delete
         indexes: [
             {
                 fields: ['sync_status']

@@ -1,6 +1,6 @@
 <template>
   <div class="files-view">
-    <!-- Header Section (remains the same) -->
+    <!-- Header Section -->
     <div class="header">
       <div class="title-section">
         <h1>Files Management</h1>
@@ -8,7 +8,7 @@
       </div>
     </div>
 
-    <!-- Filters Section (remains the same) -->
+    <!-- Filters Section -->
     <div class="filters-section">
       <div class="filters-container">
         <TextFilter v-model="filters.query" @search="applyFilters" />
@@ -34,13 +34,23 @@
       </div>
     </div>
 
+    <!-- Error State -->
+    <div v-if="error" class="error-container">
+      <div class="error-content">
+        <div class="error-icon">⚠️</div>
+        <h2>Something went wrong</h2>
+        <p>{{ error }}</p>
+        <button @click="retryFetch" class="retry-button">Try Again</button>
+      </div>
+    </div>
+
     <!-- Files Table Section -->
-    <div class="table-container" :class="{ loading }">
+    <div v-else class="table-container" :class="{ loading }">
       <FilesTable
         :files="files"
         :loading="loading"
         @delete="handleDelete"
-        @edit="handleEdit"
+        @update="handleEdit"
       />
 
       <!-- Loading Overlay -->
@@ -61,6 +71,7 @@
 
     <!-- Pagination Section -->
     <AppPagination
+      v-if="!error"
       :pagination="pagination"
       :page-size="pageSize"
       @page-change="changePage"
@@ -93,6 +104,7 @@ export default defineComponent({
     // Computed properties
     const files = computed(() => store.state.files.items)
     const loading = computed(() => store.state.files.loading)
+    const error = computed(() => store.state.files.error)
     const pagination = computed(() => store.state.files.pagination)
 
     const applyFilters = () => {
@@ -118,52 +130,24 @@ export default defineComponent({
       applyFilters()
     }
 
-    const visiblePageNumbers = computed(() => {
-      const current = pagination.value.currentPage
-      const total = pagination.value.totalPages
-      const delta = 2
-      const left = current - delta
-      const right = current + delta + 1
-      const range = []
-      const rangeWithDots = []
-      let l
-
-      for (let i = 1; i <= total; i++) {
-        if (i === 1 || i === total || (i >= left && i < right)) {
-          range.push(i)
-        }
-      }
-
-      for (let i of range) {
-        if (l) {
-          if (i - l === 2) {
-            rangeWithDots.push(l + 1)
-          } else if (i - l !== 1) {
-            rangeWithDots.push('...')
-          }
-        }
-        rangeWithDots.push(i)
-        l = i
-      }
-
-      return rangeWithDots
-    })
-
     const hasActiveFilters = computed(() =>
       Boolean(filters.value.query || filters.value.modifiedAfter)
     )
 
     // Methods
     const fetchFiles = () => {
-      console.log('currentPage', currentPage.value)
-      console.log('pagination', pagination.value)
-      console.log('pageSize', pageSize.value)
       store.dispatch('files/fetchFiles', {
         page: currentPage.value,
         size: pageSize.value,
         filters: filters.value,
         pagination: pagination.value,
       })
+    }
+
+    const retryFetch = () => {
+      // Reset error state and try fetching again
+      store.commit('files/SET_ERROR', null)
+      fetchFiles()
     }
 
     const changePage = (page: number) => {
@@ -206,30 +190,25 @@ export default defineComponent({
       }
     }
 
-    const handleSearch = (query: string) => {
-      updateTextFilter(query)
-      fetchFiles() // Trigger the search
-    }
-
     onMounted(fetchFiles)
 
     return {
       files,
       loading,
+      error,
       pagination,
       filters,
       pageSize,
       currentPage,
-      visiblePageNumbers,
       hasActiveFilters,
       updateTextFilter,
-      handleSearch,
       updateDateFilter,
       handlePageSizeChange,
       clearTextFilter,
       clearDateFilter,
       formatDate,
       fetchFiles,
+      retryFetch,
       changePage,
       handleDelete,
       handleEdit,
@@ -245,6 +224,51 @@ export default defineComponent({
   padding: 0 2rem;
   background: #f8f9fa;
   min-height: calc(100vh - 64px);
+
+  .error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    .error-content {
+      text-align: center;
+      max-width: 500px;
+
+      .error-icon {
+        font-size: 4rem;
+        margin-bottom: 1rem;
+      }
+
+      h2 {
+        color: #e53e3e;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #4a5568;
+        margin-bottom: 1.5rem;
+      }
+
+      .retry-button {
+        padding: 0.75rem 1.5rem;
+        background: #2563eb;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+
+        &:hover {
+          background: #1d4ed8;
+        }
+      }
+    }
+  }
 
   .header {
     display: flex;

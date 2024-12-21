@@ -13,6 +13,13 @@ module.exports = (sequelize) => {
                 onDelete: 'CASCADE'
             });
         }
+
+        static async isLastOwner(fileId) {
+            const count = await this.count({
+                where: { fileId }
+            });
+            return count === 0;
+        }
     }
 
     FileOwner.init({

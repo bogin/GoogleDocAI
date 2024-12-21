@@ -2,6 +2,7 @@ const OpenAI = require('openai');
 const { Op } = require('sequelize');
 const cacheService = require('./cache.service');
 require('sequelize')
+
 class OpenAIService {
   constructor() {
     this.openai = new OpenAI({
@@ -12,7 +13,7 @@ class OpenAIService {
       You are a SQL query generator for a Google Drive files database.
       Generate valid Sequelize query objects based on the following schema:
 
-       File Model:
+      File Model:
       - id: string (primary key)
       - name: text
       - mimeType: string
@@ -24,65 +25,86 @@ class OpenAIService {
       - createdTime: timestamp
       - modifiedTime: timestamp
       - version: string
-      - userId: integer (foreign key to users table)
-      - lastModifyingUser: jsonb
-      - permissions: jsonb
+      - permissions: jsonb [] (contains array of permissions with fields: id, role (owner/commenter/reader), type (user/anyone), emailAddress, displayName)
       - capabilities: jsonb
       - syncStatus: string
       - lastSyncAttempt: timestamp
-      - errorLog: jsonb
       - metadata: jsonb
 
-      User Model:
-      - id: integer (primary key)
-      - email: string
-      - displayName: string
-      - photoLink: string
-      - totalFiles: integer
-      - totalSize: bigint
+      Permission Types in files.permissions:
+      - owner: Full access to the file
+      - commenter: Can comment but not edit
+      - reader: Can only view
+      - writer: Can edit the file
 
-      Rules:
-      1. Only generate Sequelize queries for user-provided search queries related to files.
-      2. If the input query is not directly translatable to a valid Sequelize file search, return an error message: "Query is not related to file search."
-      3. Return only valid Sequelize query configurations.
+      Access Types in files.permissions:
+      - user: Individual user access
+      - anyone: Public/link access
+      - group: Group access
+      - domain: Domain-wide access
 
-      For example:
-      - "Show files where name starts with 'B'" → { where: { name: { [Op.iLike]: 'B%' } } }
-      - "Show files larger than 100MB" → { where: { size: { [Op.gt]: 104857600 } } }
-      - "Show files from user with email 'test@example.com'" →
+      Examples of permission-based queries:
+      - "Show files owned by john@example.com" →
         {
-          include: [{
-            model: User,
-            as: 'user',
-            where: { email: 'test@example.com' }
-          }]
+          where: {
+            permissions: {
+              [Op.contains]: [{
+                role: 'owner',
+                type: 'user',
+                emailAddress: 'john@example.com'
+              }]
+            }
+          }
         }
       
-      - "Show files larger than 100MB owned by users with user name containing 'John'" →
+      - "Show files where anyone can comment" →
         {
-          where: { size: { [Op.gt]: '104857600' } },
-          include: [{
-            model: User,
-            as: 'user',
-            where: { displayName: { [Op.iLike]: '%John%' } }
-          }]
+          where: {
+            permissions: {
+              [Op.contains]: [{
+                role: 'commenter',
+                type: 'anyone'
+              }]
+            }
+          }
         }
 
-       - "Show files from users with more than 100 files" → 
-        { 
-          include: [{
-            model: User,
-            as: 'user',
-            where: { totalFiles: { [Op.gt]: 100 } }
-          }]
+      - "Show files with multiple owners" →
+        {
+          where: {
+            [Op.and]: [
+              {
+                permissions: {
+                  [Op.jsonPath]: '$.#(role == "owner" && type == "user").size() > 1'
+                }
+              }
+            ]
+          }
         }
-      If the query does not match the criteria, return an error.
-    `;
+
+      - "Show files shared with domain users as commenters" →
+        {
+          where: {
+            permissions: {
+              [Op.contains]: [{
+                role: 'commenter',
+                type: 'domain'
+              }]
+            }
+          }
+        }
+
+      Rules:
+      1. Always use Op.contains for searching within the permissions JSONB array
+      2. For ownership queries, always check both role='owner' and type='user'
+      3. For public access, use type='anyone'
+      4. For complex permission queries, use Op.jsonPath when needed
+      5. Return error if query is not related to file search or permissions
+      `;
   }
 
   async generateQuery({ query, page = 1, size = 10, baseConfig }) {
     try {
-      // Cache based on query, not filters
       const cacheKey = `${query}-${page}-${size}`;
       const cachedResult = await cacheService.get(cacheKey);
       if (cachedResult) {
@@ -105,16 +127,15 @@ class OpenAIService {
 
       let aiQueryConfigRaw = response?.choices[0]?.message?.content;
 
-      if (aiQueryConfigRaw.includes("Query is not")) {
+      if (aiQueryConfigRaw.includes("Query is not") || aiQueryConfigRaw.includes("The query provided is not related to file search or permissions.")) {
         throw new Error("Error: Query is not related to file search.")
       }
-      // Remove backticks and language identifier if present
+
       aiQueryConfigRaw = aiQueryConfigRaw
         ?.replace(/```(?:javascript)?\n?/, '')
         ?.replace(/(?:js)?\n?/, '')
         ?.replace(/```$/, '');
 
-      // Convert the raw string into a JavaScript object
       let aiQueryConfig;
       try {
         aiQueryConfig = eval(`(${aiQueryConfigRaw})`);
@@ -122,12 +143,10 @@ class OpenAIService {
         throw new Error(`Failed to parse AI-generated query configuration: ${error.message}`);
       }
 
-      // Validate the AI-generated query
-      if (!aiQueryConfig || !aiQueryConfig.where || Object.keys(aiQueryConfig.where).length === 0) {
-        throw new Error('Query is not related to file search.');
+      if (!aiQueryConfig || (!aiQueryConfig.where && !aiQueryConfig.include)) {
+        throw new Error('Query is not related to file search or permissions.');
       }
 
-      // Cache the result in both Redis and memory
       await cacheService.set(cacheKey, aiQueryConfig);
 
       return aiQueryConfig;

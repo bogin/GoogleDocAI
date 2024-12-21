@@ -66,7 +66,7 @@ export const defaultColumns: Column[] = [
     label: 'Name',
     visible: true,
     sortable: true,
-    width: '250px',
+    width: '200px',
   },
   {
     key: 'owner',
@@ -127,7 +127,7 @@ export const defaultColumns: Column[] = [
   {
     key: 'mimeType',
     label: 'Type',
-    visible: true,
+    visible: false,
     sortable: true,
     width: '150px',
   },
@@ -140,9 +140,16 @@ export const defaultColumns: Column[] = [
     formatter: (value: boolean) => (value ? 'Yes' : 'No'),
   },
   {
+    key: 'webViewLink',
+    label: 'Link',
+    visible: true,
+    width: '100px',
+    formatter: (value) => value || 'No link',
+  },
+  {
     key: 'actions',
     label: 'Actions',
     visible: true,
-    width: '100px',
+    width: '150px',
   },
 ]

@@ -1,8 +1,7 @@
-const { File } = require('../models');
+const { FileOwner, User, File, sequelize } = require('../models');
 const { Op } = require('sequelize');
 const openaiService = require('../services/openai.service');
 const { isEmpty } = require("lodash");
-const { User } = require('../models');
 
 class FilesRepository {
 
@@ -13,78 +12,114 @@ class FilesRepository {
                 where: {},
                 limit: size,
                 offset: (page - 1) * size,
-                order: [['modifiedTime', 'DESC']],
-                include: [{
-                    model: User,
-                    as: 'user',
-                    attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize'],
-                }],
+                order: [['modifiedTime', 'DESC']]
             };
 
-            // Add modifiedAfter filter directly to queryConfig (don't pass to AI)
+            // Direct filters (not passed to AI)
             if (filters.modifiedAfter) {
                 queryConfig.where.modifiedTime = {
                     [Op.gte]: new Date(filters.modifiedAfter),
                 };
             }
 
-            // If a query string exists, use the AI service to generate a query
+            // Handle direct permission filters
+            if (filters.ownerEmail) {
+                queryConfig.where = {
+                    ...queryConfig.where,
+                    permissions: {
+                        [Op.contains]: [{
+                            role: 'owner',
+                            type: 'user',
+                            emailAddress: filters.ownerEmail
+                        }]
+                    }
+                };
+            }
+
+            if (filters.shared === true) {
+                queryConfig.where = {
+                    ...queryConfig.where,
+                    permissions: {
+                        [Op.contains]: [{
+                            type: 'anyone'
+                        }]
+                    }
+                };
+            }
+
+            // If a query string exists, use the AI service
             if (filters?.query) {
                 try {
                     const aiQueryConfig = await openaiService.generateQuery({
                         query: filters.query,
                         page,
                         size,
-                        baseConfig: queryConfig, // Pass only baseConfig and query
+                        baseConfig: queryConfig
                     });
 
-                    let where = [];
-                    if (!isEmpty(queryConfig.where)) {
-                        where.push(queryConfig.where)
-                    }
-                    if (!isEmpty(aiQueryConfig.where)) {
-                        where.push(aiQueryConfig.where)
-                    }
-                    if (where.length === 2) {
-                        where = {
-                            [Op.and]: where,
+                    // Merge the AI-generated where conditions
+                    if (aiQueryConfig.where) {
+                        let where = [];
+                        if (!isEmpty(queryConfig.where)) {
+                            where.push(queryConfig.where);
                         }
-                    } else if (where.length === 1) {
-                        where = where[0];
-                    } else {
-                        where = {};
-                    }
-                    // Merge the AI query with the baseConfig here, not inside AI service
-                    queryConfig = {
-                        ...queryConfig,  // Retain all properties from the base config
-                        where,
-                        order: aiQueryConfig.order || queryConfig.order,
-                    };
+                        if (!isEmpty(aiQueryConfig.where)) {
+                            where.push(aiQueryConfig.where);
+                        }
 
-                    // Handle any additional includes from AI query while preserving user include
-                    if (aiQueryConfig.include) {
-                        const existingUserInclude = queryConfig.include.find(inc => inc.as === 'user');
-                        const newIncludes = aiQueryConfig.include.filter(inc => inc.as !== 'user');
-                        queryConfig.include = [existingUserInclude, ...newIncludes];
+                        queryConfig.where = where.length > 1
+                            ? { [Op.and]: where }
+                            : where[0] || {};
+                    }
+
+                    // Handle order if provided by AI
+                    if (aiQueryConfig.order) {
+                        queryConfig.order = aiQueryConfig.order;
                     }
                 } catch (error) {
                     throw new Error(`Invalid query parameters: ${error.message}`);
                 }
             }
 
-
             // Execute the query
             const { count, rows: files } = await File.findAndCountAll(queryConfig);
 
+            // Process the files to add computed properties
+            const processedFiles = files.map(file => {
+                const fileData = file.toJSON();
+
+                // Add computed properties based on permissions
+                fileData.owners = file.permissions
+                    ?.filter(p => p.role === 'owner' && p.type === 'user')
+                    ?.map(p => ({
+                        email: p.emailAddress,
+                        displayName: p.displayName
+                    })) || [];
+
+                fileData.commenters = file.permissions
+                    ?.filter(p => p.role === 'commenter')
+                    ?.map(p => ({
+                        type: p.type,
+                        email: p.emailAddress,
+                        displayName: p.displayName
+                    })) || [];
+
+                fileData.publicAccess = file.permissions
+                    ?.find(p => p.type === 'anyone')
+                    ?.role || 'none';
+
+                return fileData;
+            });
+
             return {
-                files,
+                files: processedFiles,
                 pagination: {
                     currentPage: page,
                     pageSize: size,
                     totalItems: count,
                     totalPages: Math.ceil(count / size),
                     hasNextPage: page * size < count,
-                },
+                }
             };
         } catch (error) {
             throw new Error(`Failed to find files: ${error.message}`);
@@ -117,9 +152,63 @@ class FilesRepository {
     }
 
     async delete(fileId) {
-        const file = await this.findById(fileId);
-        await file.destroy();
-        return true;
+        // Begin transaction
+        const transaction = await sequelize.transaction();
+
+        try {
+            // Find the file with its owners
+            const file = await File.findByPk(fileId, {
+                include: [
+                    {
+                        model: FileOwner,
+                        as: 'fileOwners',
+                        include: [{ model: User }]
+                    }
+                ],
+                transaction
+            });
+
+            if (!file) {
+                throw new Error('File not found');
+            }
+
+            // Get unique users associated with this file
+            const userOwners = file.fileOwners.map(fo => fo.User);
+
+            // Remove file owners
+            await FileOwner.destroy({
+                where: { file_id: file.id },
+                transaction
+            });
+
+            // Soft delete the file
+            await file.destroy({ transaction });
+
+            // Check and potentially delete users who have no more files
+            for (const user of userOwners) {
+                const remainingFiles = await FileOwner.count({
+                    where: { user_id: user.id },
+                    transaction
+                });
+
+                // If no more files, delete the user
+                if (remainingFiles === 0) {
+                    await user.destroy({ transaction });
+                }
+            }
+
+            // Commit transaction
+            await transaction.commit();
+
+            return {
+                message: 'File and potentially associated users removed',
+                fileRemoved: true
+            };
+        } catch (error) {
+            // Rollback transaction if anything fails
+            await transaction.rollback();
+            throw error;
+        }
     }
 }
 
