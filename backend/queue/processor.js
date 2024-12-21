@@ -1,4 +1,40 @@
-const { File } = require('../models');
+const { File, User } = require('../models');
+
+const processOwner = async (ownerData) => {
+    if (!ownerData || !ownerData.emailAddress || !ownerData.permissionId) {
+        return null;
+    }
+
+    try {
+        const [user, created] = await User.findOrCreate({
+            where: { permissionId: ownerData.permissionId },
+            defaults: {
+                email: ownerData.emailAddress,
+                displayName: ownerData.displayName || null,
+                photoLink: ownerData.photoLink || null
+            }
+        });
+
+        if (!created && (
+            user.email !== ownerData.emailAddress ||
+            user.displayName !== ownerData.displayName ||
+            user.photoLink !== ownerData.photoLink
+        )) {
+            await user.update({
+                email: ownerData.emailAddress,
+                displayName: ownerData.displayName || null,
+                photoLink: ownerData.photoLink || null
+            });
+        }
+
+        return user;
+    } catch (error) {
+        console.error('Error processing owner:', error);
+        return null;
+    }
+};
+
+
 const validateFileData = (fileData) => {
     const errors = [];
     const warnings = [];
@@ -107,7 +143,8 @@ const processFiles = async (task) => {
         success: 0,
         failed: 0,
         errors: [],
-        validationIssues: []
+        validationIssues: [],
+        usersProcessed: 0
     };
 
     try {
@@ -117,36 +154,38 @@ const processFiles = async (task) => {
 
             await Promise.all(batch.map(async (fileData) => {
                 try {
-                    // Validate file data
-                    const validation = validateFileData(fileData);
-
-                    // Log validation results
-                    if (validation.warnings.length > 0) {
-                        console.log(`Validation warnings for file ${fileData.id}:`, {
-                            warnings: validation.warnings
-                        });
+                    // Process owner first
+                    const user = await processOwner(fileData.owner);
+                    if (user) {
+                        results.usersProcessed++;
                     }
 
+                    // Validate file data
+                    const validation = validateFileData(fileData);
                     if (!validation.isValid) {
                         throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
                     }
+
+                    // Add user ID to sanitized data
+                    validation.sanitizedData.userId = user ? user.id : null;
 
                     // Use sanitized data for upsert
                     await File.upsert(validation.sanitizedData);
                     results.success++;
 
+                    // Update user statistics
+                    if (user) {
+                        await user.updateStats();
+                    }
+
                 } catch (error) {
                     results.failed++;
-
-                    const errorInfo = {
+                    results.errors.push({
                         fileId: fileData.id,
                         error: error.message,
                         validationErrors: error.message.includes('Validation failed') ?
                             error.message : null
-                    };
-
-                    results.errors.push(errorInfo);
-                    console.error('File processing error:', errorInfo);
+                    });
 
                     // Update file with error status
                     await File.upsert({
@@ -157,19 +196,18 @@ const processFiles = async (task) => {
                         errorLog: {
                             error: error.message,
                             timestamp: new Date(),
-                            details: error.stack,
-                            validationErrors: errorInfo.validationErrors
+                            details: error.stack
                         }
                     });
                 }
             }));
         }
 
-        // Log final results
         console.log('Batch processing completed:', {
             totalProcessed: results.success + results.failed,
             successful: results.success,
             failed: results.failed,
+            usersProcessed: results.usersProcessed,
             errors: results.errors.length > 0 ? results.errors : null
         });
 
