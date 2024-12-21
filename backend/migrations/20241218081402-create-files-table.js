@@ -3,7 +3,8 @@ module.exports = {
     await queryInterface.createTable('files', {
       id: {
         type: Sequelize.STRING,
-        primaryKey: true
+        primaryKey: true,
+        allowNull: false
       },
       name: {
         type: Sequelize.TEXT,
@@ -22,10 +23,12 @@ module.exports = {
         type: Sequelize.STRING
       },
       shared: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
       },
       trashed: {
-        type: Sequelize.BOOLEAN
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
       },
       created_time: {
         type: Sequelize.DATE
@@ -35,9 +38,6 @@ module.exports = {
       },
       version: {
         type: Sequelize.STRING
-      },
-      owner: {
-        type: Sequelize.JSONB // Store full owner object
       },
       last_modifying_user: {
         type: Sequelize.JSONB
@@ -59,7 +59,7 @@ module.exports = {
         type: Sequelize.JSONB
       },
       metadata: {
-        type: Sequelize.JSONB // Store complete raw response
+        type: Sequelize.JSONB
       },
       created_at: {
         type: Sequelize.DATE,
@@ -70,7 +70,14 @@ module.exports = {
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
+
+    // Add useful indexes
+    await queryInterface.addIndex('files', ['sync_status']);
+    await queryInterface.addIndex('files', ['modified_time']);
+    await queryInterface.addIndex('files', ['trashed']);
+    await queryInterface.addIndex('files', ['mime_type']);
   },
+
   down: async (queryInterface) => {
     await queryInterface.dropTable('files');
   }

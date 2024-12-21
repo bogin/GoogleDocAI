@@ -1,11 +1,3 @@
-export interface File {
-  id: string
-  name: string
-  size: number
-  modifiedTime: string
-  owner: { displayName: string }
-}
-
 export interface FilesState {
   items: File[]
   currentFile: File | null
@@ -18,4 +10,62 @@ export interface FilesState {
     totalPages: 0
     hasNextPage: false
   }
+}
+
+export interface Permission {
+  id: string
+  kind: string
+  role: 'owner' | 'commenter' | 'reader' | 'writer'
+  type: 'user' | 'anyone' | 'group' | 'domain'
+  deleted?: boolean
+  photoLink?: string
+  displayName?: string
+  emailAddress?: string
+  pendingOwner?: boolean
+  allowFileDiscovery?: boolean
+}
+
+export interface File {
+  id: string
+  name: string
+  mimeType: string
+  iconLink?: string
+  webViewLink?: string
+  size: string | number
+  shared: boolean
+  trashed: boolean
+  createdTime: string | null
+  modifiedTime: string
+  version: string
+  capabilities: {
+    canEdit: boolean
+    canShare: boolean
+    canDelete: boolean
+    [key: string]: boolean
+  }
+  lastModifyingUser?: {
+    displayName: string
+    emailAddress: string
+    photoLink?: string
+  }
+  owner?: {
+    displayName: string
+    emailAddress: string
+    photoLink?: string
+  }
+  permissions: Permission[]
+}
+
+export interface Column {
+  key: keyof File | string
+  label: string
+  visible: boolean
+  sortable?: boolean
+  width?: string
+  formatter?: (value: any, file: File) => string
+}
+
+export interface FileUpdatePayload {
+  fileId: string
+  data: Partial<File>
 }

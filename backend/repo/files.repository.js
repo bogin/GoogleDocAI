@@ -2,6 +2,7 @@ const { File } = require('../models');
 const { Op } = require('sequelize');
 const openaiService = require('../services/openai.service');
 const { isEmpty } = require("lodash");
+const { User } = require('../models');
 
 class FilesRepository {
 
@@ -13,6 +14,11 @@ class FilesRepository {
                 limit: size,
                 offset: (page - 1) * size,
                 order: [['modifiedTime', 'DESC']],
+                include: [{
+                    model: User,
+                    as: 'user',
+                    attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize'],
+                }],
             };
 
             // Add modifiedAfter filter directly to queryConfig (don't pass to AI)
@@ -54,11 +60,18 @@ class FilesRepository {
                         where,
                         order: aiQueryConfig.order || queryConfig.order,
                     };
+
+                    // Handle any additional includes from AI query while preserving user include
+                    if (aiQueryConfig.include) {
+                        const existingUserInclude = queryConfig.include.find(inc => inc.as === 'user');
+                        const newIncludes = aiQueryConfig.include.filter(inc => inc.as !== 'user');
+                        queryConfig.include = [existingUserInclude, ...newIncludes];
+                    }
                 } catch (error) {
                     throw new Error(`Invalid query parameters: ${error.message}`);
                 }
             }
-            
+
 
             // Execute the query
             const { count, rows: files } = await File.findAndCountAll(queryConfig);
@@ -79,10 +92,18 @@ class FilesRepository {
     }
 
     async findById(fileId) {
-        const file = await File.findByPk(fileId);
+        const file = await File.findByPk(fileId, {
+            include: [{
+                model: User,
+                as: 'user',
+                attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize']
+            }]
+        });
+
         if (!file) {
             throw new Error('File not found');
         }
+
         return file;
     }
 

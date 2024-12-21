@@ -1,42 +1,65 @@
 <template>
   <div class="files-table-wrapper">
+    <div class="table-header">
+      <ColumnVisibilityToggle
+        :columns="columns"
+        @update:columns="updateColumns"
+      />
+    </div>
+
     <div class="table-container" v-if="files.length">
       <div class="table-scroll-container">
         <table class="files-table">
           <thead>
             <tr>
-              <th>Name</th>
-              <th>Owner</th>
-              <th>Modified</th>
-              <th>Size</th>
-              <th>Actions</th>
+              <th
+                v-for="column in visibleColumns"
+                :key="column.key"
+                :style="{ width: column.width }"
+                :class="{ sortable: column.sortable }"
+                @click="column.sortable ? handleSort(column.key) : null"
+              >
+                {{ column.label }}
+                <span
+                  v-if="column.sortable"
+                  class="sort-indicator"
+                  :class="getSortIndicatorClass(column.key)"
+                >
+                  ↕
+                </span>
+              </th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="file in files" :key="file.id">
-              <td>
-                <el-tooltip :content="file.name" placement="top">
-                  <span>{{ truncatedFileName(file.name) }}</span>
-                </el-tooltip>
-              </td>
-              <td>{{ file.owner?.displayName || 'Unknown' }}</td>
-              <td>{{ formatDate(file.modifiedTime) }}</td>
-              <td>{{ formatSize(file.size) }}</td>
-              <td class="actions">
-                <button
-                  class="btn btn-edit"
-                  @click="handleEdit(file)"
-                  title="Edit"
-                >
-                  ✏️
-                </button>
-                <button
-                  class="btn btn-delete"
-                  @click="handleDelete(file.id)"
-                  title="Delete"
-                >
-                  🗑️
-                </button>
+              <td
+                v-for="column in visibleColumns"
+                :key="column.key"
+                :style="{ width: column.width }"
+              >
+                <template v-if="column.key === 'actions'">
+                  <div class="actions">
+                    <button
+                      class="btn btn-edit"
+                      @click="handleEdit(file)"
+                      title="Edit"
+                    >
+                      ✏️
+                    </button>
+                    <button
+                      class="btn btn-delete"
+                      @click="handleDelete(file.id)"
+                      title="Delete"
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                </template>
+                <template v-else>
+                  <span :title="formatValue(file, column)">
+                    {{ formatValue(file, column) }}
+                  </span>
+                </template>
               </td>
             </tr>
           </tbody>
@@ -76,12 +99,17 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, ref, PropType } from 'vue'
-import { useRouter } from 'vue-router'
-import { File } from '@/types/files'
+import { defineComponent, ref, computed, PropType } from 'vue'
+import { File, Column } from '@/types/files'
+import { defaultColumns } from './configuration'
+import ColumnVisibilityToggle from './ColumnVisibilityToggle.vue'
 
 export default defineComponent({
   name: 'FilesTable',
+
+  components: {
+    ColumnVisibilityToggle,
+  },
 
   props: {
     files: {
@@ -93,21 +121,47 @@ export default defineComponent({
   emits: ['delete', 'update'],
 
   setup(props, { emit }) {
-    const router = useRouter()
     const showEditModal = ref(false)
     const showDeleteModal = ref(false)
     const editingFile = ref<Partial<File>>({})
     const deletingFileId = ref<string | null>(null)
+    const columns = ref<Column[]>(defaultColumns)
+    const sortConfig = ref({
+      key: null as string | null,
+      direction: 'asc' as 'asc' | 'desc',
+    })
 
-    const formatDate = (date: string): string => {
-      return new Date(date).toLocaleString()
+    const visibleColumns = computed(() => {
+      return columns.value.filter((column) => column.visible)
+    })
+
+    const updateColumns = (newColumns: Column[]) => {
+      columns.value = newColumns
     }
 
-    const formatSize = (bytes: number): string => {
-      if (!bytes) return 'N/A'
-      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB']
-      const i = Math.floor(Math.log(bytes) / Math.log(1024))
-      return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`
+    const handleSort = (key: string) => {
+      if (sortConfig.value.key === key) {
+        sortConfig.value.direction =
+          sortConfig.value.direction === 'asc' ? 'desc' : 'asc'
+      } else {
+        sortConfig.value.key = key
+        sortConfig.value.direction = 'asc'
+      }
+    }
+
+    const getSortIndicatorClass = (key: string) => {
+      if (sortConfig.value.key !== key) return ''
+      return sortConfig.value.direction === 'asc' ? 'asc' : 'desc'
+    }
+
+    const formatValue = (file: File, column: Column) => {
+      if (column.key === 'actions') return ''
+
+      const value = column.key.includes('.')
+        ? column.key.split('.').reduce((obj: any, key) => obj?.[key], file)
+        : (file as any)[column.key]
+
+      return column.formatter ? column.formatter(value, file) : value
     }
 
     const handleEdit = (file: File) => {
@@ -128,6 +182,7 @@ export default defineComponent({
         })
       }
       showEditModal.value = false
+      editingFile.value = {}
     }
 
     const cancelEdit = () => {
@@ -148,23 +203,22 @@ export default defineComponent({
       deletingFileId.value = null
     }
 
-    const truncatedFileName = (name: string) => {
-      return name.length > 10 ? name.substring(0, 10) + '...' : name
-    }
-
     return {
-      truncatedFileName,
       showEditModal,
       showDeleteModal,
       editingFile,
+      columns,
+      visibleColumns,
       handleEdit,
       handleDelete,
       saveEdit,
       cancelEdit,
       confirmDelete,
       cancelDelete,
-      formatDate,
-      formatSize,
+      updateColumns,
+      handleSort,
+      getSortIndicatorClass,
+      formatValue,
     }
   },
 })
@@ -176,6 +230,13 @@ export default defineComponent({
   width: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.table-header {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 24px;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .table-container {
@@ -190,10 +251,11 @@ export default defineComponent({
 
 .table-scroll-container {
   height: 100%;
-  overflow-y: auto;
+  overflow: auto;
 
   &::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
   }
 
   &::-webkit-scrollbar-track {
@@ -214,68 +276,45 @@ export default defineComponent({
 .files-table {
   width: 100%;
   border-collapse: collapse;
+  white-space: nowrap;
 
   thead {
     position: sticky;
     top: 0;
     z-index: 1;
+    background: #f8f9fa;
 
     th {
-      background: #f8f9fa;
       padding: 12px;
       text-align: left;
       font-weight: 600;
       color: #4a5568;
       border-bottom: 2px solid #e2e8f0;
       white-space: nowrap;
+      position: relative;
 
-      &:first-child {
-        padding-left: 24px;
+      &.sortable {
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+          background: #edf2f7;
+        }
       }
 
-      &:last-child {
-        padding-right: 24px;
+      .sort-indicator {
+        margin-left: 4px;
+        opacity: 0.5;
+
+        &.asc {
+          opacity: 1;
+          transform: rotate(180deg);
+        }
+
+        &.desc {
+          opacity: 1;
+        }
       }
-    }
-  }
-
-  tbody {
-    td {
-      padding: 12px;
-      text-align: left;
-      white-space: nowrap;
-
-      &:first-child {
-        padding-left: 24px;
-      }
-
-      &:last-child {
-        padding-right: 24px;
-      }
-    }
-  }
-}
-
-.table-body-container {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-
-    &:hover {
-      background: #a8a8a8;
     }
   }
 
@@ -289,22 +328,21 @@ export default defineComponent({
       }
 
       td {
-        vertical-align: middle;
+        padding: 12px;
+        text-align: left;
+        color: #2d3748;
+        max-width: 300px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+
+        span {
+          display: block;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
       }
     }
-  }
-}
-
-.file-name {
-  color: #2196f3;
-  cursor: pointer;
-  max-width: 300px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-
-  &:hover {
-    text-decoration: underline;
   }
 }
 

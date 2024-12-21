@@ -12,7 +12,7 @@ class OpenAIService {
       You are a SQL query generator for a Google Drive files database.
       Generate valid Sequelize query objects based on the following schema:
 
-      File Model:
+       File Model:
       - id: string (primary key)
       - name: text
       - mimeType: string
@@ -24,14 +24,22 @@ class OpenAIService {
       - createdTime: timestamp
       - modifiedTime: timestamp
       - version: string
-      - owner: jsonb (contains: emailAddress, displayName, photoLink)
-      - lastModifyingUser: jsonb (contains: emailAddress, displayName, photoLink)
+      - userId: integer (foreign key to users table)
+      - lastModifyingUser: jsonb
       - permissions: jsonb
       - capabilities: jsonb
       - syncStatus: string
       - lastSyncAttempt: timestamp
       - errorLog: jsonb
       - metadata: jsonb
+
+      User Model:
+      - id: integer (primary key)
+      - email: string
+      - displayName: string
+      - photoLink: string
+      - totalFiles: integer
+      - totalSize: bigint
 
       Rules:
       1. Only generate Sequelize queries for user-provided search queries related to files.
@@ -41,9 +49,33 @@ class OpenAIService {
       For example:
       - "Show files where name starts with 'B'" → { where: { name: { [Op.iLike]: 'B%' } } }
       - "Show files larger than 100MB" → { where: { size: { [Op.gt]: 104857600 } } }
-      - "Show files where owner's name starts with 'B'" → { where: { 'owner.displayName': { [Op.iLike]: 'B%' } } }
-      - "Show files from owner 'John Doe'" → { where: { 'owner.displayName': 'John Doe' } }
-      - "Show file from users that have name" → { where: 'owner.displayName': { [Op.ne]: null } }
+      - "Show files from user with email 'test@example.com'" →
+        {
+          include: [{
+            model: User,
+            as: 'user',
+            where: { email: 'test@example.com' }
+          }]
+        }
+      
+      - "Show files larger than 100MB owned by users with user name containing 'John'" →
+        {
+          where: { size: { [Op.gt]: '104857600' } },
+          include: [{
+            model: User,
+            as: 'user',
+            where: { displayName: { [Op.iLike]: '%John%' } }
+          }]
+        }
+
+       - "Show files from users with more than 100 files" → 
+        { 
+          include: [{
+            model: User,
+            as: 'user',
+            where: { totalFiles: { [Op.gt]: 100 } }
+          }]
+        }
       If the query does not match the criteria, return an error.
     `;
   }

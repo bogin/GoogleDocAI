@@ -1,4 +1,4 @@
-const { File, User } = require('../models');
+const { File, User, FileOwner } = require('../models');
 
 const processOwner = async (ownerData) => {
     if (!ownerData || !ownerData.emailAddress || !ownerData.permissionId) {
@@ -34,6 +34,20 @@ const processOwner = async (ownerData) => {
     }
 };
 
+const processOwners = async (owners) => {
+    if (!Array.isArray(owners)) {
+        return [];
+    }
+
+    const processedOwners = [];
+    for (const ownerData of owners) {
+        const user = await processOwner(ownerData);
+        if (user) {
+            processedOwners.push(user);
+        }
+    }
+    return processedOwners;
+};
 
 const validateFileData = (fileData) => {
     const errors = [];
@@ -81,8 +95,8 @@ const validateFileData = (fileData) => {
     });
 
     // Object validations
-    if (fileData.owner && typeof fileData.owner !== 'object') {
-        errors.push('Invalid owner format: expected object');
+    if (fileData.owners && !Array.isArray(fileData.owners)) {
+        errors.push('Invalid owners format: expected array');
     }
 
     if (fileData.lastModifyingUser && typeof fileData.lastModifyingUser !== 'object') {
@@ -124,7 +138,6 @@ const sanitizeFileData = (fileData) => {
             createdTime: fileData.createdTime ? new Date(fileData.createdTime) : null,
             modifiedTime: fileData.modifiedTime ? new Date(fileData.modifiedTime) : null,
             version: fileData.version ? String(fileData.version) : null,
-            owner: fileData.owners?.[0] || null,
             lastModifyingUser: fileData.lastModifyingUser || null,
             permissions: Array.isArray(fileData.permissions) ? fileData.permissions : [],
             capabilities: fileData.capabilities || null,
@@ -154,10 +167,10 @@ const processFiles = async (task) => {
 
             await Promise.all(batch.map(async (fileData) => {
                 try {
-                    // Process owner first
-                    const user = await processOwner(fileData.owner);
-                    if (user) {
-                        results.usersProcessed++;
+                    // Process all owners
+                    const processedOwners = await processOwners(fileData.owners || []);
+                    if (processedOwners.length > 0) {
+                        results.usersProcessed += processedOwners.length;
                     }
 
                     // Validate file data
@@ -166,17 +179,25 @@ const processFiles = async (task) => {
                         throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
                     }
 
-                    // Add user ID to sanitized data
-                    validation.sanitizedData.userId = user ? user.id : null;
+                    // Create the file record
+                    const [file] = await File.upsert(validation.sanitizedData);
 
-                    // Use sanitized data for upsert
-                    await File.upsert(validation.sanitizedData);
-                    results.success++;
+                    // Update owner associations
+                    if (processedOwners.length > 0) {
+                        await FileOwner.destroy({ where: { fileId: file.id } });
+                        await Promise.all(processedOwners.map(owner =>
+                            FileOwner.create({
+                                fileId: file.id,
+                                userId: owner.id,
+                                role: 'owner'
+                            })
+                        ));
+                    }
 
                     // Update user statistics
-                    if (user) {
-                        await user.updateStats();
-                    }
+                    await Promise.all(processedOwners.map(owner => owner.updateStats()));
+
+                    results.success++;
 
                 } catch (error) {
                     results.failed++;

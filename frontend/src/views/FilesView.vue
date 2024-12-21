@@ -74,7 +74,7 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import TextFilter from '@/components/filters/TextFilter.vue'
 import DateFilter from '@/components/filters/DateFilter.vue'
-import FilesTable from '@/components/FilesTable.vue'
+import FilesTable from '../components/FilesTable/FilesTable.vue'
 import AppPagination from '@/components/AppPagination.vue'
 
 export default defineComponent({
@@ -241,7 +241,6 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 .files-view {
-  max-width: 1400px;
   margin: 0 auto;
   padding: 0 2rem;
   background: #f8f9fa;
@@ -298,142 +297,223 @@ export default defineComponent({
 
   .filters-section {
     background: white;
-    padding: 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    margin-bottom: 2rem;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    margin-bottom: 1.5rem;
 
     .filters-container {
-      display: flex;
+      display: grid;
+      grid-template-columns: minmax(300px, 1fr) 200px auto;
       gap: 1rem;
+      padding: 1rem;
       align-items: center;
 
+      :deep(.text-filter) {
+        .search-input {
+          width: 100%;
+          height: 42px;
+          padding: 0 1rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9375rem;
+          background: #f8fafc;
+          transition: all 0.2s ease;
+
+          &:hover {
+            border-color: #cbd5e1;
+            background: white;
+          }
+
+          &:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: white;
+          }
+
+          &::placeholder {
+            color: #94a3b8;
+          }
+        }
+      }
+
+      :deep(.date-filter) {
+        input {
+          width: 100%;
+          height: 42px;
+          padding: 0 1rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          font-size: 0.9375rem;
+          color: #475569;
+          background: #f8fafc;
+
+          &:hover {
+            border-color: #cbd5e1;
+            background: white;
+          }
+
+          &:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            background: white;
+          }
+        }
+      }
+
       .apply-filters-btn {
-        height: 44px;
-        padding: 0 24px;
-        background: #1a73e8;
+        height: 42px;
+        padding: 0 1.5rem;
+        background: #2563eb;
         color: white;
         border: none;
-        border-radius: 24px;
-        font-size: 14px;
+        border-radius: 8px;
+        font-size: 0.9375rem;
         font-weight: 500;
         cursor: pointer;
-        transition: background-color 0.2s;
+        transition: all 0.2s ease;
         white-space: nowrap;
 
         &:hover {
-          background: #1557b0;
+          background: #1d4ed8;
+          transform: translateY(-1px);
         }
 
         &:active {
-          background: #174ea6;
+          transform: translateY(0);
         }
       }
     }
 
     .active-filters {
-      margin-top: 1rem;
+      padding: 0.75rem 1rem;
       display: flex;
-      gap: 0.75rem;
+      gap: 0.5rem;
       flex-wrap: wrap;
+      border-top: 1px solid #f1f5f9;
 
       .filter-tag {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        background: #ebf8ff;
-        color: #2b6cb0;
-        border-radius: 20px;
-        font-size: 0.875rem;
+        gap: 0.25rem;
+        padding: 0.25rem 0.75rem;
+        background: #f1f5f9;
+        color: #475569;
+        border-radius: 6px;
+        font-size: 0.8125rem;
+        font-weight: 500;
 
         .clear-filter {
-          background: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          padding: 0.25rem;
+          margin-left: 0.25rem;
           border: none;
-          color: #4a5568;
+          background: none;
+          color: #64748b;
           cursor: pointer;
-          padding: 2px 6px;
-          border-radius: 50%;
+          border-radius: 4px;
+          transition: all 0.15s ease;
 
           &:hover {
-            background: rgba(0, 0, 0, 0.1);
-            color: #e53e3e;
+            background: #e2e8f0;
+            color: #dc2626;
           }
         }
       }
     }
   }
+}
 
-  .table-container {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    position: relative;
-    min-height: 40vh;
-    max-height: 80vh;
-    overflow: hidden;
-
-    &.loading {
-      opacity: 0.7;
-    }
-
-    .loading-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      background: rgba(255, 255, 255, 0.9);
-      z-index: 10;
-
-      .spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top-color: #4299e1;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-    }
-
-    .empty-state {
-      text-align: center;
-      padding: 4rem 2rem;
-      color: #4a5568;
-
-      .icon {
-        font-size: 3rem;
-        margin-bottom: 1rem;
-        display: block;
-      }
-
-      p {
-        font-size: 1.125rem;
-        margin: 0;
-
-        &.subtitle {
-          font-size: 0.875rem;
-          color: #718096;
-          margin-top: 0.5rem;
-        }
-      }
-    }
-  }
-
-  .pagination-section {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 1.5rem;
+@media (max-width: 768px) {
+  .filters-section {
     padding: 1rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+
+    .filters-container {
+      flex-direction: column;
+      gap: 1rem;
+
+      :deep(.text-filter),
+      :deep(.date-filter) {
+        width: 100%;
+      }
+
+      .apply-filters-btn {
+        width: 100%;
+      }
+    }
   }
+}
+
+.table-container {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  position: relative;
+  min-height: 40vh;
+  max-height: 80vh;
+  overflow: hidden;
+
+  &.loading {
+    opacity: 0.7;
+  }
+
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.9);
+    z-index: 10;
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #e2e8f0;
+      border-top-color: #4299e1;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #4a5568;
+
+    .icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      display: block;
+    }
+
+    p {
+      font-size: 1.125rem;
+      margin: 0;
+
+      &.subtitle {
+        font-size: 0.875rem;
+        color: #718096;
+        margin-top: 0.5rem;
+      }
+    }
+  }
+}
+
+.pagination-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes spin {

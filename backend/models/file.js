@@ -3,7 +3,10 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
     class File extends Model {
         static associate(models) {
-            // define associations here if needed
+            File.belongsTo(models.User, {
+                foreignKey: 'user_id',
+                as: 'user'
+            });
         }
     }
 
@@ -29,7 +32,7 @@ module.exports = (sequelize) => {
             allowNull: true
         },
         size: {
-            type: DataTypes.STRING, // Changed to STRING as Google returns size as string
+            type: DataTypes.STRING,
             allowNull: true
         },
         shared: {
@@ -52,9 +55,14 @@ module.exports = (sequelize) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-       owner: {
-           type: DataTypes.JSONB, // Changed to JSONB for full owner object
-           allowNull: true
+        userId: {
+            type: DataTypes.INTEGER,
+            allowNull: true,
+            field: 'user_id',
+            references: {
+                model: 'users',
+                key: 'id'
+            }
         },
         lastModifyingUser: {
             type: DataTypes.JSONB,
@@ -112,11 +120,6 @@ module.exports = (sequelize) => {
             }
         ]
     });
-
-    // Add virtual fields or instance methods if needed
-    File.prototype.getOwnerName = function () {
-        return this.owner?.displayName || 'Unknown';
-    };
 
     File.prototype.isEditable = function () {
         return this.capabilities?.canEdit || false;
