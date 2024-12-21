@@ -1,6 +1,7 @@
 const { File } = require('../models');
 const { Op } = require('sequelize');
 const openaiService = require('../services/openai.service');
+const { isEmpty } = require("lodash");
 
 class FilesRepository {
 
@@ -31,24 +32,33 @@ class FilesRepository {
                         baseConfig: queryConfig, // Pass only baseConfig and query
                     });
 
+                    let where = [];
+                    if (!isEmpty(queryConfig.where)) {
+                        where.push(queryConfig.where)
+                    }
+                    if (!isEmpty(aiQueryConfig.where)) {
+                        where.push(aiQueryConfig.where)
+                    }
+                    if (where.length === 2) {
+                        where = {
+                            [Op.and]: where,
+                        }
+                    } else if (where.length === 1) {
+                        where = where[0];
+                    } else {
+                        where = {};
+                    }
                     // Merge the AI query with the baseConfig here, not inside AI service
                     queryConfig = {
                         ...queryConfig,  // Retain all properties from the base config
-
-                        where: {
-                            [Op.and]: [
-                                queryConfig.where,      // Base 'where' conditions
-                                aiQueryConfig.where,    // AI-generated 'where' conditions
-                            ],
-                        },
-
-                        // Merge 'order' (if AI has no order, use the default)
+                        where,
                         order: aiQueryConfig.order || queryConfig.order,
                     };
                 } catch (error) {
                     throw new Error(`Invalid query parameters: ${error.message}`);
                 }
             }
+            
 
             // Execute the query
             const { count, rows: files } = await File.findAndCountAll(queryConfig);

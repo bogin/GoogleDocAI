@@ -1,7 +1,7 @@
 const OpenAI = require('openai');
 const { Op } = require('sequelize');
 const cacheService = require('./cache.service');
-
+require('sequelize')
 class OpenAIService {
   constructor() {
     this.openai = new OpenAI({
@@ -73,7 +73,7 @@ class OpenAIService {
 
       let aiQueryConfigRaw = response?.choices[0]?.message?.content;
 
-      if (aiQueryConfigRaw === "Error: Query is not related to file search.") {
+      if (aiQueryConfigRaw.includes("Query is not")) {
         throw new Error("Error: Query is not related to file search.")
       }
       // Remove backticks and language identifier if present
