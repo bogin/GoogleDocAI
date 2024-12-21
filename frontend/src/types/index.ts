@@ -1,3 +1,5 @@
+import { AnalyticsState } from './analytics'
+
 export interface DocFile {
   id: string
   name: string
@@ -14,4 +16,5 @@ export interface FilesState {
 
 export interface RootState {
   files?: FilesState
+  analytics: AnalyticsState
 }

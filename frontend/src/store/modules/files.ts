@@ -1,6 +1,7 @@
 import { Module, ActionContext } from 'vuex'
 import axios from 'axios'
-import { FilesState, RootState, File } from '@/types/files'
+import { FilesState, File } from '@/types/files'
+import { RootState } from '@/types'
 
 type FilesActionContext = ActionContext<FilesState, RootState>
 

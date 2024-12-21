@@ -19,7 +19,3 @@ export interface FilesState {
     hasNextPage: false
   }
 }
-
-export interface RootState {
-  files: FilesState
-}
