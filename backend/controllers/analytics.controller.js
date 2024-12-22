@@ -1,15 +1,25 @@
+const { validationResult, body } = require('express-validator');
 const analyticsService = require('../services/analytics.service');
 
 class AnalyticsController {
     async analyzeFiles(req, res) {
         try {
-            const { query } = req.body;
-            
-
-            if (!query) {
+            // Input validation
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
                 return res.status(400).json({
                     success: false,
-                    error: 'Query is required'
+                    errors: errors.array()
+                });
+            }
+
+            const { query } = req.body;
+
+            // Additional validation
+            if (typeof query !== 'string' || query.length > 1000) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Invalid query format or length'
                 });
             }
 
@@ -25,7 +35,7 @@ class AnalyticsController {
             console.error('Analytics controller error:', error);
             return res.status(500).json({
                 success: false,
-                error: 'Failed to process analytics query'
+                error: 'Internal server error'
             });
         }
     }
