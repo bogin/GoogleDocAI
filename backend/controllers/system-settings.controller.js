@@ -31,6 +31,30 @@ const validateValue = [
     }),
 ];
 
+const validateCreate = [
+  body('key')
+    .trim()
+    .notEmpty()
+    .withMessage('Key is required')
+    .isLength({ max: 255 })
+    .withMessage('Key must be less than 255 characters')
+    .escape(),
+  body('value')
+    .notEmpty()
+    .withMessage('Value is required')
+    .custom((value) => {
+      try {
+        if (typeof value === 'string') {
+          JSON.parse(value);
+        }
+        return true;
+      } catch (e) {
+        throw new Error('Value must be valid JSON');
+      }
+    }),
+];
+
+
 const validateBatchUpdate = [
   body('settings')
     .isArray()
@@ -114,6 +138,26 @@ class SystemSettingsController {
       res.status(500).json({ error: 'Failed to update settings' });
     }
   }
+
+  async create(req, res) {
+    try {
+      // Check if setting already exists
+      const existing = await systemSettingsService.get(req.body.key);
+      if (existing) {
+        return res.status(409).json({
+          error: 'Setting already exists. Use update endpoint to modify existing settings.'
+        });
+      }
+
+      const setting = await systemSettingsService.create(
+        req.body.key,
+        req.body.value
+      );
+      res.status(201).json(this.sanitizeData(setting));
+    } catch (error) {
+      res.status(500).json({ error: 'Failed to create setting' });
+    }
+  }
 }
 
 // Create controller instance
@@ -122,6 +166,7 @@ const controller = new SystemSettingsController();
 // Export controller methods with their validation chains
 module.exports = {
   getAll: controller.getAll.bind(controller),
+  create: [...validateCreate, controller.validateRequest, controller.create.bind(controller)],
   get: [...validateKey, controller.validateRequest, controller.get.bind(controller)],
   update: [...validateKey, ...validateValue, controller.validateRequest, controller.update.bind(controller)],
   updateBatch: [...validateBatchUpdate, controller.validateRequest, controller.updateBatch.bind(controller)]

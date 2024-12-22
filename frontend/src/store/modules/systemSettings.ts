@@ -50,6 +50,12 @@ const mutations = {
       }
     }
   },
+  ADD_SETTING(state: SystemSettingsState, setting: SystemSetting): void {
+    if (!state.settings) {
+      state.settings = []
+    }
+    state.settings.push(setting)
+  },
 }
 
 const actions = {
@@ -75,7 +81,7 @@ const actions = {
     }
   },
 
-  async updateSetting(
+  async createSettings(
     { commit }: SystemSettingsContext,
     payload: UpdateSettingPayload
   ): Promise<SystemSetting> {
@@ -83,6 +89,32 @@ const actions = {
     commit('SET_ERROR', null)
 
     try {
+      const { data } = await axios.post<SystemSetting>(
+        `/system-settings/`,
+        payload
+      )
+      commit('SET_SETTINGS', [...(state.settings || []), data])
+      return data
+    } catch (error) {
+      const errorMessage =
+        error instanceof AxiosError
+          ? error.response?.data?.error || 'Failed to create setting'
+          : 'An unexpected error occurred'
+      commit('SET_ERROR', errorMessage)
+      throw error
+    } finally {
+      commit('SET_LOADING', false)
+    }
+  },
+  async updateSettings(
+    { commit }: SystemSettingsContext,
+    payload: UpdateSettingPayload
+  ): Promise<SystemSetting> {
+    commit('SET_LOADING', true)
+    commit('SET_ERROR', null)
+
+    try {
+      console.log(`${payload}`)
       const { data } = await axios.put<SystemSetting>(
         `/system-settings/${payload.key}`,
         { value: payload.value }
@@ -149,7 +181,7 @@ const getters = {
   },
 }
 
-const systemSettingsModule: Module<SystemSettingsState, RootState> = {
+const systemSettings: Module<SystemSettingsState, RootState> = {
   namespaced: true,
   state,
   mutations,
@@ -157,4 +189,4 @@ const systemSettingsModule: Module<SystemSettingsState, RootState> = {
   getters,
 }
 
-export default systemSettingsModule
+export default systemSettings

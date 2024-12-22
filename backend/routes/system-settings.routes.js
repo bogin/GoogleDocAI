@@ -20,6 +20,7 @@ router.use(settingsLimiter);
 router.get('/', systemSettingsController.getAll);
 router.get('/:key', systemSettingsController.get);
 router.put('/:key', systemSettingsController.update);
+router.post('/', systemSettingsController.create)
 router.put('/', systemSettingsController.updateBatch);
 
 module.exports = router;

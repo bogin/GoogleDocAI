@@ -82,6 +82,7 @@
       :form-config="openAIFormConfig"
       :initial-data="openAISettings"
       @update="handleOpenAIUpdate"
+      @create="handleOpenAICreate"
       @close="showOpenAIForm = false"
     />
 
@@ -92,6 +93,7 @@
       :form-config="googleFormConfig"
       :initial-data="googleSettings"
       @update="handleGoogleUpdate"
+      @create="handleGoogleCreate"
       @close="showGoogleForm = false"
     />
   </div>
@@ -159,7 +161,8 @@ export default defineComponent({
       data: Record<string, any>
     ): Promise<void> => {
       try {
-        await store.dispatch('systemSettings/updateSetting', {
+        console.log('ggegergerge')
+        await store.dispatch('systemSettings/updateSettings', {
           key: 'openai',
           value: data,
         })
@@ -169,11 +172,40 @@ export default defineComponent({
       }
     }
 
+    const handleOpenAICreate = async (
+      data: Record<string, any>
+    ): Promise<void> => {
+      try {
+        console.log('ggegergerge')
+        await store.dispatch('systemSettings/createSettings', {
+          key: 'openai',
+          value: data,
+        })
+        showOpenAIForm.value = false
+      } catch (error) {
+        console.error('Failed to update OpenAI settings:', error)
+      }
+    }
+
+    const handleGoogleCreate = async (
+      data: Record<string, any>
+    ): Promise<void> => {
+      try {
+        await store.dispatch('systemSettings/createSettings', {
+          key: 'google',
+          value: data,
+        })
+        showGoogleForm.value = false
+      } catch (error) {
+        console.error('Failed to create Google settings:', error)
+      }
+    }
+
     const handleGoogleUpdate = async (
       data: Record<string, any>
     ): Promise<void> => {
       try {
-        await store.dispatch('systemSettings/updateSetting', {
+        await store.dispatch('systemSettings/updateSettings', {
           key: 'google',
           value: data,
         })
@@ -230,6 +262,8 @@ export default defineComponent({
       googleFormConfig,
       openAISettings,
       googleSettings,
+      handleOpenAICreate,
+      handleGoogleCreate,
       getSettingByKey,
       handleOpenAIUpdate,
       handleGoogleUpdate,

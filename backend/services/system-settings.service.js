@@ -31,6 +31,25 @@ class SystemSettingsService {
         }
     }
 
+    async create(key, value) {
+        try {
+            // Check if setting exists
+            const existing = await this.get(key);
+            if (existing) {
+                throw new Error(`Setting with key ${key} already exists`);
+            }
+
+            // Create new setting
+            const setting = await SystemSetting.create({
+                key,
+                value,
+            });
+            return setting;
+        } catch (error) {
+            throw new Error(`Failed to create setting ${key}: ${error.message}`);
+        }
+    }
+
     async updateBatch(settings) {
         const t = await SystemSetting.sequelize.transaction();
         try {
