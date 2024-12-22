@@ -1,9 +1,7 @@
 const { File, User, FileOwner } = require('../models');
 
 const processOwner = async (ownerData) => {
-    if (!ownerData || !ownerData.emailAddress || !ownerData.permissionId) {
-        return null;
-    }
+    if (!ownerData || !ownerData.emailAddress || !ownerData.permissionId) return null;
 
     try {
         const [user, created] = await User.findOrCreate({
@@ -11,20 +9,19 @@ const processOwner = async (ownerData) => {
             defaults: {
                 email: ownerData.emailAddress,
                 displayName: ownerData.displayName || null,
-                photoLink: ownerData.photoLink || null
-            }
+                photoLink: ownerData.photoLink || null,
+            },
         });
 
-        if (!created && (
-            user.email !== ownerData.emailAddress ||
-            user.displayName !== ownerData.displayName ||
-            user.photoLink !== ownerData.photoLink
-        )) {
-            await user.update({
-                email: ownerData.emailAddress,
-                displayName: ownerData.displayName || null,
-                photoLink: ownerData.photoLink || null
-            });
+        if (!created) {
+            const updates = {};
+            if (user.email !== ownerData.emailAddress) updates.email = ownerData.emailAddress;
+            if (user.displayName !== ownerData.displayName) updates.displayName = ownerData.displayName || null;
+            if (user.photoLink !== ownerData.photoLink) updates.photoLink = ownerData.photoLink || null;
+
+            if (Object.keys(updates).length > 0) {
+                await user.update(updates);
+            }
         }
 
         return user;
@@ -32,21 +29,6 @@ const processOwner = async (ownerData) => {
         console.error('Error processing owner:', error);
         return null;
     }
-};
-
-const processOwners = async (owners) => {
-    if (!Array.isArray(owners)) {
-        return [];
-    }
-
-    const processedOwners = [];
-    for (const ownerData of owners) {
-        const user = await processOwner(ownerData);
-        if (user) {
-            processedOwners.push(user);
-        }
-    }
-    return processedOwners;
 };
 
 const validateFileData = (fileData) => {
@@ -150,93 +132,93 @@ const sanitizeFileData = (fileData) => {
     }
 };
 
-const processFiles = async (task) => {
-    const { type, files } = task;
-    const results = {
-        success: 0,
-        failed: 0,
-        errors: [],
-        validationIssues: [],
-        usersProcessed: 0
-    };
-
-    try {
-        const batchSize = 500;
-        for (let i = 0; i < files.length; i += batchSize) {
-            const batch = files.slice(i, i + batchSize);
-
-            await Promise.all(batch.map(async (fileData) => {
-                try {
-                    // Process all owners
-                    const processedOwners = await processOwners(fileData.owners || []);
-                    if (processedOwners.length > 0) {
-                        results.usersProcessed += processedOwners.length;
-                    }
-
-                    // Validate file data
-                    const validation = validateFileData(fileData);
-                    if (!validation.isValid) {
-                        throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
-                    }
-
-                    // Create the file record
-                    const [file] = await File.upsert(validation.sanitizedData);
-
-                    // Update owner associations
-                    if (processedOwners.length > 0) {
-                        await FileOwner.destroy({ where: { fileId: file.id } });
-                        await Promise.all(processedOwners.map(owner =>
-                            FileOwner.create({
-                                fileId: file.id,
-                                userId: owner.id,
-                                role: 'owner'
-                            })
-                        ));
-                    }
-
-                    // Update user statistics
-                    await Promise.all(processedOwners.map(owner => owner.updateStats()));
-
-                    results.success++;
-
-                } catch (error) {
-                    results.failed++;
-                    results.errors.push({
-                        fileId: fileData.id,
-                        error: error.message,
-                        validationErrors: error.message.includes('Validation failed') ?
-                            error.message : null
-                    });
-
-                    // Update file with error status
-                    await File.upsert({
-                        id: fileData.id,
-                        metadata: fileData,
-                        syncStatus: 'error',
-                        lastSyncAttempt: new Date(),
-                        errorLog: {
-                            error: error.message,
-                            timestamp: new Date(),
-                            details: error.stack
-                        }
-                    });
-                }
-            }));
+const getUniqueUserPermissions = (fileData) => {
+    // Combine owners and permissions arrays
+    const allPermissions = [...(fileData.owners || []), ...(fileData.permissions || [])];
+    
+    // Filter for user type permissions and remove duplicates based on permissionId/id
+    const uniquePermissions = new Map();
+    
+    allPermissions.forEach(permission => {
+        // Skip non-user permissions
+        if (permission.type === 'anyone' || permission.type === 'domain') {
+            return;
         }
 
-        console.log('Batch processing completed:', {
-            totalProcessed: results.success + results.failed,
-            successful: results.success,
-            failed: results.failed,
-            usersProcessed: results.usersProcessed,
-            errors: results.errors.length > 0 ? results.errors : null
-        });
+        // For owners array items
+        if (permission.permissionId) {
+            uniquePermissions.set(permission.permissionId, {
+                permissionId: permission.permissionId,
+                emailAddress: permission.emailAddress,
+                displayName: permission.displayName,
+                photoLink: permission.photoLink,
+                role: permission.me ? 'owner' : 'reader' // Default to reader if not owner
+            });
+        }
+        // For permissions array items
+        else if (permission.id && permission.type === 'user') {
+            uniquePermissions.set(permission.id, {
+                permissionId: permission.id,
+                emailAddress: permission.emailAddress,
+                displayName: permission.displayName,
+                photoLink: permission.photoLink,
+                role: permission.role
+            });
+        }
+    });
 
-        return results;
-    } catch (error) {
-        console.error('File processing failed:', error);
-        throw error;
+    return Array.from(uniquePermissions.values());
+};
+
+const processFiles = async (task) => {
+    const { type, files } = task;
+    const results = { success: 0, failed: 0, errors: [] };
+
+    for (const fileData of files) {
+        try {
+            const validation = validateFileData(fileData);
+            if (!validation.isValid) {
+                throw new Error(`Validation failed: ${validation.errors.join(', ')}`);
+            }
+
+            const sanitizedData = sanitizeFileData(fileData);
+            const [file] = await File.upsert(sanitizedData);
+
+            // Get unique user permissions
+            const uniqueUserPermissions = getUniqueUserPermissions(fileData);
+
+            // Process each unique user permission
+            for (const permissionData of uniqueUserPermissions) {
+                const user = await processOwner(permissionData);
+                if (user) {
+                    try {
+                        await FileOwner.findOrCreate({
+                            where: {
+                                fileId: file.id,
+                                userId: user.id
+                            },
+                            defaults: {
+                                permissionRole: permissionData.role || 'reader'
+                            }
+                        });
+                    } catch (error) {
+                        console.warn(`Duplicate file owner entry skipped for file ${file.id} and user ${user.id}`);
+                    }
+                }
+            }
+
+            results.success++;
+        } catch (error) {
+            results.failed++;
+            results.errors.push({ 
+                fileId: fileData.id, 
+                error: error.message,
+                details: error.original ? JSON.stringify(error.original, null, 4) : null
+            });
+        }
     }
+    console.log(JSON.stringify(results, null, 4))
+    return results;
 };
 
 module.exports = processFiles;

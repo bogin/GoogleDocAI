@@ -11,9 +11,10 @@ module.exports = (sequelize) => {
 
         async updateStats() {
             const files = await this.getFiles();
-            this.total_files = files.length;
-            this.total_size = files.reduce((sum, file) => {
-                return sum + (parseInt(file.size) || 0);
+            this.totalFiles = files.length;
+            this.totalSize = files.reduce((sum, file) => {
+                const size = parseInt(file.size, 10);
+                return sum + (isNaN(size) ? 0 : size);
             }, 0);
             await this.save();
         }

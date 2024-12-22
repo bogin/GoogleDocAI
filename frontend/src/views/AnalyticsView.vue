@@ -28,32 +28,46 @@
         <p class="results-stats">
           Found {{ totalItems }} results ({{ queryTime }}ms)
         </p>
+        <input
+          v-model="searchInResults"
+          type="text"
+          placeholder="Search in results..."
+          class="results-search"
+        />
       </div>
 
-      <!-- Dynamic Results Display -->
+      <!-- Results Display -->
       <div class="results-content">
-        <template v-if="Array.isArray(formattedResults)">
+        <template v-if="Array.isArray(filteredResults)">
           <div
-            v-for="(item, index) in formattedResults"
+            v-for="(item, index) in filteredResults"
             :key="index"
             class="result-item"
+            :class="{ highlight: isHighlighted(item) }"
           >
-            <div class="result-title">{{ formatResultTitle(item) }}</div>
-            <div class="result-details">
-              <template
-                v-for="(value, key) in formatResultDetails(item)"
-                :key="key"
-              >
-                <div class="detail-item">
-                  <span class="detail-label">{{ formatLabel(key) }}:</span>
-                  <span class="detail-value">{{ value }}</span>
-                </div>
-              </template>
+            <div class="result-header" @click="toggleExpand(index)">
+              <span class="expand-icon">{{
+                expandedItems[index] ? '▼' : '▶'
+              }}</span>
+              <div class="result-title">{{ formatResultTitle(item) }}</div>
+            </div>
+            <div v-show="expandedItems[index]" class="result-details">
+              <div v-for="(value, key) in item" :key="key" class="detail-row">
+                <span class="detail-key">{{ formatKey(`${key}`) }}:</span>
+                <span class="detail-value">{{ formatValue(value) }}</span>
+              </div>
             </div>
           </div>
         </template>
-        <div v-else class="result-summary">
-          {{ formatSingleResult(formattedResults) }}
+        <div v-else class="single-result">
+          <div
+            v-for="(value, key) in formattedResults"
+            :key="key"
+            class="detail-row"
+          >
+            <span class="detail-key">{{ formatKey(`${key}`) }}:</span>
+            <span class="detail-value">{{ formatValue(value) }}</span>
+          </div>
         </div>
       </div>
     </div>
@@ -73,6 +87,8 @@ export default defineComponent({
   setup() {
     const store = useStore()
     const searchQuery = ref('')
+    const searchInResults = ref('')
+    const expandedItems = ref<Record<number, boolean>>({})
 
     // Computed properties from store
     const isLoading = computed(() => store.state.analytics.isLoading)
@@ -83,6 +99,18 @@ export default defineComponent({
     )
     const totalItems = computed(() => store.state.analytics.totalItems)
     const queryTime = computed(() => store.state.analytics.queryTime)
+
+    // Filter results based on search
+    const filteredResults = computed(() => {
+      if (!searchInResults.value || !Array.isArray(formattedResults.value)) {
+        return formattedResults.value
+      }
+
+      const searchTerm = searchInResults.value.toLowerCase()
+      return formattedResults.value.filter((item) =>
+        JSON.stringify(item).toLowerCase().includes(searchTerm)
+      )
+    })
 
     const handleSearch = async (query: string): Promise<void> => {
       if (!query.trim()) {
@@ -97,49 +125,52 @@ export default defineComponent({
       }
     }
 
-    // Helper formatting functions
+    const toggleExpand = (index: number) => {
+      expandedItems.value[index] = !expandedItems.value[index]
+    }
+
     const formatResultTitle = (item: FormattedResult): string => {
       if (item.name) return item.name
       if (item.owner?.displayName) return item.owner.displayName
       return 'Result'
     }
 
-    const formatResultDetails = (
-      item: FormattedResult
-    ): Record<string, string | number> => {
-      const details: Record<string, string | number> = {}
-      if (item.fileCount) details.count = item.fileCount
-      if (item.totalSize) details.size = item.formattedSize || '0 Bytes'
-      if (item.modifiedTime) details.modified = item.formattedDate || ''
-      return details
+    const formatKey = (key: string): string => {
+      return key
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, (str) => str.toUpperCase())
     }
 
-    const formatLabel = (key: string): string => {
-      return (
-        key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1')
-      )
+    const formatValue = (value: any): string => {
+      if (value === null || value === undefined) return '-'
+      if (typeof value === 'object') return JSON.stringify(value, null, 2)
+      return String(value)
     }
 
-    const formatSingleResult = (result: FormattedResult): string => {
-      if (typeof result === 'object') {
-        return JSON.stringify(result, null, 2)
-      }
-      return String(result)
+    const isHighlighted = (item: FormattedResult): boolean => {
+      if (!searchInResults.value) return false
+      return JSON.stringify(item)
+        .toLowerCase()
+        .includes(searchInResults.value.toLowerCase())
     }
 
     return {
       searchQuery,
+      searchInResults,
+      expandedItems,
       isLoading,
       error,
       hasResults,
       formattedResults,
+      filteredResults,
       totalItems,
       queryTime,
       handleSearch,
+      toggleExpand,
       formatResultTitle,
-      formatResultDetails,
-      formatLabel,
-      formatSingleResult,
+      formatKey,
+      formatValue,
+      isHighlighted,
     }
   },
 })
@@ -193,9 +224,6 @@ export default defineComponent({
 
 .results-container {
   .results-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
     margin-bottom: 1rem;
     padding-bottom: 1rem;
     border-bottom: 1px solid #ebebeb;
@@ -203,55 +231,93 @@ export default defineComponent({
     .results-stats {
       color: #70757a;
       font-size: 0.875rem;
+      margin: 0.5rem 0;
+    }
+
+    .results-search {
+      width: 100%;
+      padding: 0.5rem;
+      border: 1px solid #ebebeb;
+      border-radius: 4px;
+      font-size: 0.875rem;
+      margin-top: 0.5rem;
+
+      &:focus {
+        outline: none;
+        border-color: #1a73e8;
+      }
     }
   }
+}
 
-  .result-item {
-    padding: 1rem;
-    border-bottom: 1px solid #ebebeb;
-    transition: background-color 0.2s;
+.result-item {
+  border: 1px solid #ebebeb;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+
+  &.highlight {
+    background-color: #fff3e0;
+  }
+
+  .result-header {
+    padding: 0.75rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
 
     &:hover {
       background-color: #f8f9fa;
     }
 
-    .result-title {
-      font-size: 1.125rem;
-      color: #1a73e8;
-      margin-bottom: 0.5rem;
+    .expand-icon {
+      margin-right: 0.5rem;
+      font-size: 0.75rem;
+      color: #5f6368;
     }
 
-    .result-details {
-      display: flex;
-      gap: 1rem;
-      flex-wrap: wrap;
-
-      .detail-item {
-        font-size: 0.875rem;
-        color: #70757a;
-
-        .detail-label {
-          font-weight: 500;
-          margin-right: 0.25rem;
-        }
-      }
+    .result-title {
+      font-weight: 500;
+      color: #1a73e8;
     }
   }
 
-  .result-summary {
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 8px;
+  .result-details {
+    padding: 0.75rem;
+    border-top: 1px solid #ebebeb;
+    background-color: #f8f9fa;
+  }
+}
+
+.detail-row {
+  display: flex;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+
+  .detail-key {
+    color: #5f6368;
+    min-width: 120px;
+    font-weight: 500;
+  }
+
+  .detail-value {
+    color: #202124;
+    word-break: break-word;
     white-space: pre-wrap;
     font-family: monospace;
   }
+}
+
+.single-result {
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+  border: 1px solid #ebebeb;
 }
 
 @keyframes spin {
   0% {
     transform: rotate(0deg);
   }
-
   100% {
     transform: rotate(360deg);
   }

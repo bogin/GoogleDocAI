@@ -15,10 +15,7 @@ module.exports = (sequelize) => {
         }
 
         static async isLastOwner(fileId) {
-            const count = await this.count({
-                where: { fileId }
-            });
-            return count === 0;
+            return (await this.count({ where: { fileId } })) === 1;
         }
     }
 

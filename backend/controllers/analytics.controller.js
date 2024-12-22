@@ -4,10 +4,7 @@ class AnalyticsController {
     async analyzeFiles(req, res) {
         try {
             const { query } = req.body;
-            const options = {
-                page: parseInt(req.query.page) || 1,
-                size: parseInt(req.query.size) || 10
-            };
+            
 
             if (!query) {
                 return res.status(400).json({
@@ -16,7 +13,7 @@ class AnalyticsController {
                 });
             }
 
-            const result = await analyticsService.analyzeFiles(query, options);
+            const result = await analyticsService.analyzeQuery(query);
 
             if (!result.success) {
                 return res.status(400).json(result);

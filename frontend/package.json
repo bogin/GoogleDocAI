@@ -10,18 +10,21 @@
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^6.7.1",
+    "@jsonforms/vue": "^3.4.1",
     "axios": "^1.7.9",
     "core-js": "^3.8.3",
     "element-plus": "^2.9.1",
     "lucide-vue-next": "^0.468.0",
     "vue": "^3.2.13",
     "vue-class-component": "^8.0.0-0",
+    "vue-json-viewer": "^3.0.4",
     "vue-router": "^4.0.3",
     "vuex": "^4.0.0"
   },
   "devDependencies": {
     "@babel/core": "^7.12.16",
     "@babel/eslint-parser": "^7.12.16",
+    "@types/vue3-json-viewer": "^2.2.0",
     "@typescript-eslint/eslint-plugin": "^5.4.0",
     "@typescript-eslint/parser": "^5.4.0",
     "@vue/cli-plugin-babel": "~5.0.0",

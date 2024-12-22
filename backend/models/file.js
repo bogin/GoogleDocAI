@@ -4,14 +4,15 @@ module.exports = (sequelize) => {
     class File extends Model {
         static associate(models) {
             File.belongsTo(models.User, {
-                foreignKey: 'user_id',
-                as: 'user'
+                foreignKey: 'userId', // Consistent with Sequelize conventions
+                as: 'user',
             });
             File.hasMany(models.FileOwner, {
-                foreignKey: 'file_id',
-                as: 'fileOwners'
+                foreignKey: 'fileId', // Fix case for field name
+                as: 'fileOwners',
             });
         }
+
 
         async safeDelete(userId) {
             // Remove the user from file owners

@@ -1,28 +1,30 @@
-const { File } = require('../models');
-const openAIService = require('./openai.service');
+const { File, User, FileOwner } = require('../models'); // Make sure you include all models
+const openAIService = require('./openai-analytics.service');
 
 class AnalyticsService {
-    async analyzeFiles(query, options = {}) {
+    async analyzeQuery(query) {
         let queryConfig;
         try {
-            // Generate query configuration
+            // Generate query configuration from OpenAI Service
             queryConfig = await openAIService.generateQuery({
-                query,
-                ...options
+                query
             });
 
-            if (!queryConfig || !queryConfig.method || !queryConfig.params) {
+            // Validate the generated query configuration
+            await this.validateQuery(queryConfig);
+
+            if (!queryConfig || !queryConfig.model || !queryConfig.function || !queryConfig.params) {
                 throw new Error('Invalid query configuration generated');
             }
 
-            // Execute the query using the specified method
-            const result = await File[queryConfig.method](queryConfig.params);
+            // Use dynamic method call to execute the query
+            const result = await this.executeQuery(queryConfig);
 
             // Format the result
             return {
                 success: true,
                 query: query,
-                method: queryConfig.method,
+                method: queryConfig.function,
                 result: result,
                 metadata: {
                     timestamp: new Date(),
@@ -46,14 +48,38 @@ class AnalyticsService {
         }
     }
 
-    async validateQuery(queryConfig) {
-        const validMethods = ['findAll', 'findOne', 'count', 'findAndCountAll'];
-        
-        if (!validMethods.includes(queryConfig.method)) {
-            throw new Error(`Invalid method: ${queryConfig.method}`);
+    // Execute query based on the dynamic model and function
+    async executeQuery(queryConfig) {
+        const { model, function: method, params } = queryConfig;
+
+        if (!model || !method || !params) {
+            throw new Error('Missing query configuration for model, method, or params');
         }
 
-        // Validate params based on method
+        const modelInstance = this.getModelInstance(model);
+        
+        // Dynamically call the method with the params
+        return modelInstance[method](params);
+    }
+
+    // Dynamically fetch the correct model
+    getModelInstance(model) {
+        switch (model) {
+            case 'File': return File;
+            case 'User': return User;
+            case 'FileOwner': return FileOwner;
+            default: throw new Error(`Unknown model: ${model}`);
+        }
+    }
+
+    async validateQuery(queryConfig) {
+        // Validate the possible methods and parameters
+        const validMethods = ['findAll', 'findOne', 'count', 'findAndCountAll'];
+
+        if (!validMethods.includes(queryConfig.function)) {
+            throw new Error(`Invalid method: ${queryConfig.function}`);
+        }
+
         if (!queryConfig.params || typeof queryConfig.params !== 'object') {
             throw new Error('Invalid params configuration');
         }
