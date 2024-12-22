@@ -46,6 +46,15 @@
           <i class="nav-icon">📁</i>
           <span>Files</span>
         </router-link>
+
+        <router-link
+          :to="{ name: 'settings' }"
+          class="nav-link"
+          active-class="active"
+        >
+          <i class="nav-icon">⚙️</i>
+          <span>Settings</span>
+        </router-link>
       </div>
     </nav>
 

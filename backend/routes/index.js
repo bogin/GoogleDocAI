@@ -5,7 +5,7 @@ const xss = require('xss-clean');
 const authRoutes = require('./auth.routes');
 const filesRoutes = require('./files.routes');
 const analyticsRoutes = require('./analytics.routes');
-
+const systemSettingsRoutes = require('./system-settings.routes')
 const router = express.Router();
 
 // Apply security middlewares
@@ -23,5 +23,6 @@ router.use(limiter);
 router.use('/auth', authRoutes);
 router.use('/files', filesRoutes);
 router.use('/analytics', analyticsRoutes);
+router.use('/system-settings', systemSettingsRoutes);
 
 module.exports = router;

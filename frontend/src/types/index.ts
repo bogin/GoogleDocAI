@@ -1,4 +1,5 @@
 import { AnalyticsState } from './analytics'
+import { SystemSetting } from './systemSettings'
 
 export interface DocFile {
   id: string
@@ -17,4 +18,9 @@ export interface FilesState {
 export interface RootState {
   files?: FilesState
   analytics: AnalyticsState
+  systemSettings: {
+    isLoading: boolean
+    error: string | null
+    settings: SystemSetting[]
+  }
 }
