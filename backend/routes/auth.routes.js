@@ -24,7 +24,7 @@ router.use((req, res, next) => {
     next();
 });
 
-router.get('/google', authController.initiateGoogleAuth);
-router.get('/google/callback', authController.handleGoogleCallback);
+router.get('/', authController.initiateGoogleAuth);
+router.get('/callback', authController.handleGoogleCallback);
 
 module.exports = router;

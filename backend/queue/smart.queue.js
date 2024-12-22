@@ -81,13 +81,6 @@ class SyncQueue extends BaseService {
         }
     }
 
-    async addToQueue(task) {
-        this.queue.push(task);
-        if (!this.isProcessing) {
-            await this.processQueue();
-        }
-    }
-
     async processQueue() {
         if (this.isProcessing || this.queue.length === 0) return;
 

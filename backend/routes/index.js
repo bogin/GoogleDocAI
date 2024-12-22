@@ -20,7 +20,7 @@ const limiter = rateLimit({
 });
 router.use(limiter);
 
-router.use('/auth', authRoutes);
+router.use('/auth/google', authRoutes);
 router.use('/files', filesRoutes);
 router.use('/analytics', analyticsRoutes);
 router.use('/system-settings', systemSettingsRoutes);
