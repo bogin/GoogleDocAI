@@ -1,5 +1,4 @@
 const filesRepository = require('../repo/files.repository');
-const openaiService = require('./openai.service');
 
 const DEFAULTS = {
   page: 1,

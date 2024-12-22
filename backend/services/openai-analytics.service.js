@@ -3,13 +3,12 @@ const cacheService = require('./cache.service');
 require('sequelize');
 const { Op } = require('sequelize');
 const { File, FileOwner, User } = require('../models');
+const systemSettingsService = require('./system-settings.service');
+const BaseOpenAIService = require('./open-ai.abstract.service');
 
-class OpenAIAnalyticsService {
+class OpenAIAnalyticsService extends BaseOpenAIService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
-
+    super();
     this.systemPrompt = `
     You are a SQL query generator for a database related to files, users, owners, and permissions. 
 Generate valid Sequelize query objects for the following schemas and rules.
@@ -177,12 +176,13 @@ Generate valid Sequelize query objects for the following schemas and rules.
   }
 
   async generateQuery({ query }) {
+    await this.ensureInitialized();
     try {
       const cacheKey = `${query}`;
       const cachedResult = await cacheService.get(cacheKey);
-    //   if (cachedResult) {
-    //     return cachedResult;
-    //   }
+      //   if (cachedResult) {
+      //     return cachedResult;
+      //   }
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',

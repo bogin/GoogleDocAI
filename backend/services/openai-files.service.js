@@ -3,12 +3,11 @@ const cacheService = require('./cache.service');
 require('sequelize');
 const { Op } = require('sequelize');
 const {File, FileOwner, User } = require("../models");
+const BaseOpenAIService = require('./open-ai.abstract.service');
 
-class OpenAIService {
+class FilesOpenAIService extends BaseOpenAIService {
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-    });
+    super();
 
     this.systemPrompt = `
         You are a SQL query generator for a database storing Google Drive-like files.
@@ -219,6 +218,7 @@ class OpenAIService {
   }
 
   async generateQuery({ query, page = 1, size = 10, baseConfig }) {
+    await this.ensureInitialized();
     try {
       const cacheKey = `${query}-${page}-${size}`;
       const cachedResult = await cacheService.get(cacheKey);
@@ -272,4 +272,4 @@ class OpenAIService {
   }
 }
 
-module.exports = new OpenAIService();
+module.exports = new FilesOpenAIService();

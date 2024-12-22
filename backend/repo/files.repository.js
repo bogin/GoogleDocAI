@@ -1,6 +1,6 @@
 const { FileOwner, User, File, sequelize } = require('../models');
 const { Op } = require('sequelize');
-const openaiService = require('../services/openai.service');
+const openaiService = require('../services/openai-files.service');
 const { isEmpty } = require("lodash");
 
 class FilesRepository {
