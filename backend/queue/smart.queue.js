@@ -1,14 +1,30 @@
 const { File } = require('../models');
 const { Op } = require('sequelize');
+const BaseService = require('../services/base.service');
+const googleService = require('../services/google.service');
 
-class SyncQueue {
+
+class SyncQueue extends BaseService {
     constructor() {
+        super();
+        this.addDependency(googleService);
         this.queue = [];
         this.isProcessing = false;
-        this.lastCheckTime = null;
-        this.monitorInterval = null;
-        this.isInitialized = false;
-        this.processor = null;
+        this.taskProcessor = null;
+    }
+
+    async initialize() {
+        await this.waitForDependencies();
+        this.startMonitoring();
+        this.markInitialized();
+    }
+
+    async addToQueue(task) {
+        await this.waitForInit();
+        this.queue.push(task);
+        if (!this.isProcessing) {
+            await this.processQueue();
+        }
     }
 
     setInitialized(value) {

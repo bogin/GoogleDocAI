@@ -1,3 +1,4 @@
+// services/auth.service.js
 const googleService = require('./google.service');
 const etlService = require('./etl.service');
 const smartQueue = require('../queue/smart.queue');
@@ -11,15 +12,18 @@ class AuthService {
 
     async getGoogleAuthUrl() {
         try {
+            // Wait for service to be ready
+            await this.googleService.waitForInit();
             return this.googleService.getAuthUrl();
         } catch (error) {
             console.error('Error getting Google auth URL:', error);
-            throw new Error('Failed to generate authentication URL');
+            throw new Error(error.message || 'Failed to generate authentication URL');
         }
     }
 
     async handleGoogleCallback(code) {
         try {
+            // Set credentials and get auth
             await this.googleService.setCredentials(code);
             const auth = this.googleService.getAuth();
 
@@ -28,8 +32,8 @@ class AuthService {
             }
 
             // Initialize dependent services
-            this.etlService.setAuth(auth);
-            this.smartQueue.setInitialized(true);
+            await this.etlService.setAuth(auth);
+            await this.smartQueue.setInitialized(true);
 
             console.log('Successfully authenticated and initialized services');
 
@@ -41,32 +45,50 @@ class AuthService {
             console.error('Error handling Google callback:', error);
             return {
                 success: false,
-                error: 'Authentication process failed'
+                error: error.message || 'Authentication process failed'
             };
         }
     }
 
-    // Additional authentication-related methods can be added here
     async validateAuthToken(token) {
         try {
-            // Implement token validation logic
+            // Wait for service to be ready
+            await this.googleService.waitForInit();
+
+            // Implement token validation logic here
+            const isValid = token && this.googleService.isAuthenticated;
+
             return {
                 success: true,
-                valid: true // or false based on validation
+                valid: isValid
             };
         } catch (error) {
             console.error('Token validation error:', error);
             return {
                 success: false,
-                error: 'Token validation failed'
+                error: error.message || 'Token validation failed'
             };
         }
     }
 
-    async revokeAccess(userId) {
+    async revokeAccess() {
         try {
-            // Implement access revocation logic
-            await this.googleService.revokeAccess(userId);
+            await this.googleService.waitForInit();
+
+            // Reset authentication state
+            this.googleService.isAuthenticated = false;
+
+            // Clear tokens file if it exists
+            try {
+                await fs.unlink(this.googleService.tokensPath);
+            } catch (err) {
+                // Ignore if file doesn't exist
+            }
+
+            // Notify services
+            this.etlService.setAuth(null);
+            this.smartQueue.setInitialized(false);
+
             return {
                 success: true,
                 message: 'Access successfully revoked'
@@ -75,7 +97,7 @@ class AuthService {
             console.error('Access revocation error:', error);
             return {
                 success: false,
-                error: 'Failed to revoke access'
+                error: error.message || 'Failed to revoke access'
             };
         }
     }

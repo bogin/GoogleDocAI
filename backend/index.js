@@ -6,6 +6,8 @@ const routes = require('./routes/index');
 const validateDatabaseConnection = require('./services/postgres.db.service');
 const googleService = require('./services/google.service');
 const { redisClient } = require('./config/redis.config');
+const syncQueue = require('./queue/smart.queue');
+const etlService = require('./services/etl.service');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -20,7 +22,7 @@ app.use('/', routes);
 // Error handling middleware
 const errorHandler = (err, req, res, next) => {
   console.error(err.stack);
-  res.status(500).json({ message : err.message  });
+  res.status(500).json({ message: err.message });
 };
 app.use(errorHandler);
 
@@ -34,40 +36,38 @@ async function validateRedisConnection() {
     return false;
   }
 }
-
 async function startServer() {
-  try {
-    // Check database connection
-    const isDbConnected = await validateDatabaseConnection();
-    if (!isDbConnected) {
-      throw new Error('Database connection failed');
-    }
-    console.log('Database connected successfully');
+  const app = express();
 
-    // Check Redis connection
-    const isRedisConnected = await validateRedisConnection();
-    if (!isRedisConnected) {
-      throw new Error('Redis connection failed');
-    }
-    console.log('Redis connected successfully');
+  // Initialize database first
+  const isDbConnected = await validateDatabaseConnection();
+  if (!isDbConnected) throw new Error('Database connection failed');
 
-    // Initialize Google Auth for API endpoints
-    const auth = await googleService.initializeGoogleAuth();
-    if (!auth) {
-      console.error('Google authentication failed');
-    } else {
-      console.log('Google Auth initialized successfully');
-    }
+  // Set up express middleware and routes
+  app.use(express.json());
+  app.use(cors({ origin: 'http://localhost:8080' }));
+  app.use('/', routes);
 
-    app.listen(port, () => {
+  // Start server immediately
+  const server = app.listen(port, () => {
       console.log(`API Server running on port ${port}`);
-    });
-  } catch (error) {
-    console.error('Failed to start server:', error);
-    process.exit(1);
-  }
-}
+  });
 
+  // Initialize services in parallel
+  await Promise.all([
+      googleService.initialize(),
+      etlService.initialize(),
+      syncQueue.initialize()
+  ]);
+
+  // Set up auth state listener
+  googleService.on('authenticated', (auth) => {
+      etlService.setAuth(auth);
+      syncQueue.setInitialized(true);
+  });
+
+  return server;
+}
 
 // Handle process termination
 process.on('SIGTERM', () => {

@@ -5,6 +5,8 @@ const { google } = require('googleapis');
 const { Op } = require('sequelize');
 const EventEmitter = require('events');
 const syncQueue = require('../queue/smart.queue');
+const googleService = require('./google.service');
+const BaseService = require('./base.service');
 
 const SyncStatus = {
     PENDING: 'pending',
@@ -14,48 +16,24 @@ const SyncStatus = {
     IN_PROGRESS: 'in_progress'
 };
 
-class ETLService extends EventEmitter {
+class ETLService extends BaseService {
     constructor() {
         super();
+        this.addDependency(googleService);
         this.drive = null;
-        this.lastSyncTime = null;
-        this.isInitialized = false;
-        this.authCheckInterval = null;
         this.isSyncing = false;
-        this.maxRetries = 3;
     }
 
     async initialize() {
-        this.startPeriodicSync().catch(console.error);
-        
-        this.authCheckInterval = setInterval(() => {
-            if (!this.isInitialized) {
-                console.log('Waiting for auth...');
-            }
-        }, 5000);
-
-        return new Promise((resolve) => {
-            if (this.isInitialized) {
-                resolve();
-            } else {
-                this.once('initialized', resolve);
-            }
-        });
+        await this.waitForDependencies();
+        await this.loadLastSyncTime();
+        this.markInitialized();
     }
 
     setAuth(auth) {
         if (!auth) return;
-        
         this.drive = google.drive({ version: 'v3', auth });
-        this.isInitialized = true;
-        this.emit('initialized');
-
-        if (this.authCheckInterval) {
-            clearInterval(this.authCheckInterval);
-            this.authCheckInterval = null;
-        }
-
-        syncQueue.setInitialized(true);
+        this.startPeriodicSync().catch(console.error);
     }
 
     async loadLastSyncTime() {

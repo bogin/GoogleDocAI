@@ -1,33 +1,79 @@
 const OpenAI = require('openai');
 const systemSettingsService = require('../services/system-settings.service');
+const EventEmitter = require('events');
 
-class BaseOpenAIService {
+class BaseOpenAIService extends EventEmitter {
     constructor() {
+        super();
         this.openai = null;
         this.systemPrompt = '';
+        this.isConfigured = false;
+        this.configurationPromise = null;
+        this.configResolver = null;
         this.initialize();
     }
 
-    async ensureInitialized() {
-        if (!this.openai) {
-            await this.initialize();
+    async waitForConfiguration() {
+        if (this.isConfigured) return true;
+        
+        if (!this.configurationPromise) {
+            this.configurationPromise = new Promise(resolve => {
+                this.configResolver = resolve;
+            });
         }
+        
+        return this.configurationPromise;
     }
 
     async initialize() {
         try {
             const settings = await systemSettingsService.get('openai');
-            if (!settings || !settings.value.apiKey) {
-                throw new Error('OpenAI API key not found in settings');
+            if (!settings || !settings.value?.apiKey) {
+                console.log('Waiting for OpenAI API key to be configured...');
+                return false;
             }
 
             this.openai = new OpenAI({
                 apiKey: settings.value.apiKey,
             });
+
+            this.isConfigured = true;
+            if (this.configResolver) {
+                this.configResolver(true);
+            }
+
+            return true;
         } catch (error) {
             console.error('Failed to initialize OpenAI:', error);
-            throw error;
+            return false;
         }
+    }
+
+    async ensureInitialized() {
+        if (!this.isConfigured) {
+            const initialized = await this.initialize();
+            if (!initialized) {
+                await this.waitForConfiguration();
+                // Try one more time after configuration is signaled
+                await this.initialize();
+            }
+        }
+        
+        if (!this.openai) {
+            throw new Error('OpenAI client not properly initialized');
+        }
+    }
+
+    async requiresConfiguration() {
+        return !this.isConfigured;
+    }
+
+    async reinitialize() {
+        this.openai = null;
+        this.isConfigured = false;
+        this.configurationPromise = null;
+        this.configResolver = null;
+        return this.initialize();
     }
 
     // Abstract method that child classes must implement

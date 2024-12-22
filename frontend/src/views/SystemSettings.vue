@@ -62,10 +62,6 @@
               maskString(googleSettings?.clientSecret)
             }}</span>
           </div>
-          <div class="setting-item">
-            <label>Redirect URI:</label>
-            <span>{{ googleSettings?.redirectUri }}</span>
-          </div>
           <p class="last-updated">
             Last updated:
             {{ formatDate(getSettingByKey('google')?.updated_at) }}
@@ -148,20 +144,12 @@ export default defineComponent({
         required: true,
         placeholder: 'Enter Google Client Secret',
       },
-      {
-        name: 'redirectUri',
-        label: 'Redirect URI',
-        type: 'text',
-        required: true,
-        placeholder: 'Enter Redirect URI',
-      },
     ]
 
     const handleOpenAIUpdate = async (
       data: Record<string, any>
     ): Promise<void> => {
       try {
-        console.log('ggegergerge')
         await store.dispatch('systemSettings/updateSettings', {
           key: 'openai',
           value: data,
@@ -176,7 +164,6 @@ export default defineComponent({
       data: Record<string, any>
     ): Promise<void> => {
       try {
-        console.log('ggegergerge')
         await store.dispatch('systemSettings/createSettings', {
           key: 'openai',
           value: data,

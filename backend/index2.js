@@ -1,75 +1,147 @@
+// background.js (index2.js)
 require('dotenv').config();
 const validateDatabaseConnection = require('./services/postgres.db.service');
 const googleService = require('./services/google.service');
 const etlService = require('./services/etl.service');
 const syncQueue = require('./queue/smart.queue');
 const fileProcessor = require('./queue/processor');
+const EventEmitter = require('events');
 
-async function startServer() {
-    try {
-        // First, validate database connection
-        const isDbConnected = await validateDatabaseConnection();
-        if (!isDbConnected) {
-            throw new Error('Database connection failed');
-        }
-        console.log('Database connected successfully');
+class BackgroundService extends EventEmitter {
+    constructor() {
+        super();
+        this.isRunning = false;
+        this.processInterval = null;
+    }
 
-        // Set up processor for queue
-        syncQueue.setProcessor(fileProcessor);
+    async waitForGoogleSettings() {
+        return new Promise((resolve) => {
+            const checkSettings = async () => {
+                const initialized = await googleService.initialize();
+                if (initialized) {
+                    if (this.configCheckInterval) {
+                        clearInterval(this.configCheckInterval);
+                    }
+                    resolve(true);
+                }
+            };
 
-        // Try to authenticate first
-        const auth = await googleService.initializeGoogleAuth();
+            // Check immediately first
+            checkSettings();
 
-        if (auth) {
-            // If auth successful, initialize services
-            console.log('Google Auth initialized successfully');
-            etlService.setAuth(auth);
-            syncQueue.setInitialized(true);
-            console.log('Services fully initialized with auth');
+            // Then set up interval
+            this.configCheckInterval = setInterval(checkSettings, 10000); // Check every 10 seconds
+        });
+    }
 
-            // Start ETL after auth is confirmed
+    async start() {
+        try {
+            // Initialize database first
+            const isDbConnected = await validateDatabaseConnection();
+            if (!isDbConnected) {
+                throw new Error('Database connection failed');
+            }
+            console.log('Database connected successfully');
+
+            // Set up processor for queue
+            syncQueue.setProcessor(fileProcessor);
+
+            // Wait for Google service initialization
+            console.log('Waiting for Google settings...');
+            await this.waitForGoogleSettings();
+            console.log('Google service configured from DB');
+
+            // Initialize ETL service in standby mode
             await etlService.initialize();
-            console.log('ETL Service initialization complete');
-        } else {
-            // If no auth, prepare services but don't start them
-            console.log('No auth available, initializing services in standby mode...');
+            console.log('ETL Service initialized in standby mode');
 
-            // Initialize ETL in waiting mode
-            const etlInitPromise = etlService.initialize();
-
-            // Set up auth success listener
-            googleService.on('authenticated', async (newAuth) => {
+            // Set up auth state listener
+            googleService.on('authenticated', async (auth) => {
                 console.log('Received authentication update');
-                etlService.setAuth(newAuth);
+                etlService.setAuth(auth);
                 syncQueue.setInitialized(true);
-                console.log('Services activated with new auth');
+                await this.startProcessing();
+                console.log('Services activated with auth');
             });
 
-            // Wait for ETL to be ready (but not started)
-            await etlInitPromise;
-            console.log('Services initialized in standby mode');
+            // Check if we already have valid auth
+            const setupNeeded = await googleService.requiresSetup();
+            if (!setupNeeded) {
+                console.log('Using existing Google authentication');
+                etlService.setAuth(googleService.getAuth());
+                syncQueue.setInitialized(true);
+                await this.startProcessing();
+                console.log('Services fully initialized with existing auth');
+            }
+
+            // Keep the process alive
+            this.startHeartbeat();
+
+            // Set up graceful shutdown
+            this.setupShutdownHandlers();
+
+        } catch (error) {
+            console.error('Failed to start background service:', error);
+            throw error;
         }
+    }
 
-        // Set up graceful shutdown
-        process.on('SIGTERM', gracefulShutdown);
-        process.on('SIGINT', gracefulShutdown);
+    async startProcessing() {
+        try {
+            await etlService.startPeriodicSync();
+            console.log('ETL processing started');
+        } catch (error) {
+            console.error('Error starting processing:', error);
+        }
+    }
 
-    } catch (error) {
-        console.error('Failed to start server:', error);
-        process.exit(1);
+    startHeartbeat() {
+        this.isRunning = true;
+        this.processInterval = setInterval(() => {
+            if (this.isRunning) {
+                console.log('Background service running...', new Date().toISOString());
+            }
+        }, 60000); // Log every minute
+    }
+
+    setupShutdownHandlers() {
+        const shutdown = async () => {
+            console.log('Shutting down background service...');
+            this.isRunning = false;
+
+            if (this.processInterval) {
+                clearInterval(this.processInterval);
+            }
+
+            if (this.configCheckInterval) {
+                clearInterval(this.configCheckInterval);
+            }
+
+            try {
+                // Stop ETL service
+                if (etlService.authCheckInterval) {
+                    clearInterval(etlService.authCheckInterval);
+                }
+
+                // Stop sync queue
+                syncQueue.stopMonitoring();
+
+                console.log('Background service stopped successfully');
+                process.exit(0);
+            } catch (error) {
+                console.error('Error during shutdown:', error);
+                process.exit(1);
+            }
+        };
+
+        process.on('SIGTERM', shutdown);
+        process.on('SIGINT', shutdown);
     }
 }
 
-async function gracefulShutdown() {
-    console.log('Shutdown signal received');
-    syncQueue.stopMonitoring();
-    if (etlService.authCheckInterval) {
-        clearInterval(etlService.authCheckInterval);
-    }
-    process.exit(0);
-}
-
-startServer().catch(error => {
-    console.error('Fatal error during ETL startup:', error);
+// Create and start the service
+const backgroundService = new BackgroundService();
+backgroundService.start().catch(error => {
+    console.error('Fatal error during background service startup:', error);
     process.exit(1);
 });
