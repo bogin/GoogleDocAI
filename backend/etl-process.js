@@ -1,10 +1,9 @@
-// background.js (index2.js)
 require('dotenv').config();
 const validateDatabaseConnection = require('./services/postgres.db.service');
 const googleService = require('./services/google.service');
 const etlService = require('./services/etl.service');
-const syncQueue = require('./queue/smart.queue');
-const fileProcessor = require('./queue/processor');
+const syncQueue = require('./services/queue');
+const fileProcessor = require('./services/queue/processor');
 const EventEmitter = require('events');
 
 class BackgroundService extends EventEmitter {
@@ -26,24 +25,20 @@ class BackgroundService extends EventEmitter {
                 }
             };
 
-            // Check immediately first
             checkSettings();
 
-            // Then set up interval
-            this.configCheckInterval = setInterval(checkSettings, 10000); // Check every 10 seconds
+            this.configCheckInterval = setInterval(checkSettings, 10000);
         });
     }
 
     async start() {
         try {
-            // Initialize database first
             const isDbConnected = await validateDatabaseConnection();
             if (!isDbConnected) {
                 throw new Error('Database connection failed');
             }
             console.log('Database connected successfully');
 
-            // Set up processor for queue
             syncQueue.setProcessor(fileProcessor);
 
             // Wait for Google service initialization
@@ -51,11 +46,9 @@ class BackgroundService extends EventEmitter {
             await this.waitForGoogleSettings();
             console.log('Google service configured from DB');
 
-            // Initialize ETL service in standby mode
             await etlService.initialize();
             console.log('ETL Service initialized in standby mode');
 
-            // Set up auth state listener
             googleService.on('authenticated', async (auth) => {
                 console.log('Received authentication update');
                 etlService.setAuth(auth);
@@ -64,7 +57,6 @@ class BackgroundService extends EventEmitter {
                 console.log('Services activated with auth');
             });
 
-            // Check if we already have valid auth
             const setupNeeded = await googleService.requiresSetup();
             if (!setupNeeded) {
                 console.log('Using existing Google authentication');
@@ -74,10 +66,8 @@ class BackgroundService extends EventEmitter {
                 console.log('Services fully initialized with existing auth');
             }
 
-            // Keep the process alive
             this.startHeartbeat();
 
-            // Set up graceful shutdown
             this.setupShutdownHandlers();
 
         } catch (error) {
@@ -101,7 +91,7 @@ class BackgroundService extends EventEmitter {
             if (this.isRunning) {
                 console.log('Background service running...', new Date().toISOString());
             }
-        }, 60000); // Log every minute
+        }, 60000);
     }
 
     setupShutdownHandlers() {
@@ -118,12 +108,10 @@ class BackgroundService extends EventEmitter {
             }
 
             try {
-                // Stop ETL service
                 if (etlService.authCheckInterval) {
                     clearInterval(etlService.authCheckInterval);
                 }
 
-                // Stop sync queue
                 syncQueue.stopMonitoring();
 
                 console.log('Background service stopped successfully');
@@ -139,7 +127,6 @@ class BackgroundService extends EventEmitter {
     }
 }
 
-// Create and start the service
 const backgroundService = new BackgroundService();
 backgroundService.start().catch(error => {
     console.error('Fatal error during background service startup:', error);

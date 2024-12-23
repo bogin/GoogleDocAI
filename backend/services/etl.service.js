@@ -1,20 +1,10 @@
-// src/services/etl.service.js
-const { File } = require('../models');
-const { SystemSetting } = require('../models');
 const { google } = require('googleapis');
 const { Op } = require('sequelize');
-const EventEmitter = require('events');
-const syncQueue = require('../queue/smart.queue');
+const syncQueue = require('../services/queue');
 const googleService = require('./google.service');
 const BaseService = require('./base.service');
-
-const SyncStatus = {
-    PENDING: 'pending',
-    SUCCESS: 'success',
-    ERROR: 'error',
-    STALE: 'stale',
-    IN_PROGRESS: 'in_progress'
-};
+const filesRepository = require('../repo/files.repository');
+const systemSettingsRepository = require('../repo/systemSettings.repository');
 
 class ETLService extends BaseService {
     constructor() {
@@ -38,7 +28,7 @@ class ETLService extends BaseService {
 
     async loadLastSyncTime() {
         try {
-            const setting = await SystemSetting.findOne({
+            const setting = await systemSettingsRepository.findOne({
                 where: { key: 'lastSyncTime' }
             });
 
@@ -51,7 +41,7 @@ class ETLService extends BaseService {
 
     async updateLastSyncTime() {
         const now = new Date();
-        await SystemSetting.upsert({
+        await systemSettingsRepository.upsert({
             key: 'lastSyncTime',
             value: { time: now.toISOString() }
         });
@@ -62,7 +52,7 @@ class ETLService extends BaseService {
         const TWO_HOURS = 2 * 60 * 60 * 1000;
         const ONE_DAY = 24 * 60 * 60 * 1000;
 
-        const filesToSync = await File.findAll({
+        const filesToSync = await filesRepository.findAll({
             where: {
                 [Op.or]: [
                     {
@@ -128,7 +118,7 @@ class ETLService extends BaseService {
     }
 
     async checkForModifiedFiles() {
-        const latestSuccessfulSync = await File.findOne({
+        const latestSuccessfulSync = await filesRepository.findOne({
             where: { sync_status: 'success' },
             order: [['modified_time', 'DESC']],
             attributes: ['modified_time']
@@ -136,7 +126,7 @@ class ETLService extends BaseService {
 
         if (latestSuccessfulSync) {
             return this.drive.files.list({
-                q: `modifiedTime > '${latestSuccessfulSync.dataValues?.modified_time?.toISOString()}' and mimeType = 'application/vnd.google-apps.document'`,
+                q: `modifiedTime > '${latestSuccessfulSync.dataValues?.modifiedTime?.toISOString()}' and mimeType = 'application/vnd.google-apps.document'`,
                 fields: 'files(id, modifiedTime)'
             });
         }
@@ -145,24 +135,19 @@ class ETLService extends BaseService {
     async startPeriodicSync() {
         await this.loadLastSyncTime();
 
-        // First, check for modified files and mark as stale if needed
         const modifiedFiles = await this.checkForModifiedFiles();
         if (modifiedFiles?.data?.files?.length > 0) {
-            await File.update(
-                { sync_status: 'stale' },
-                {
-                    where: {
-                        id: { [Op.in]: modifiedFiles.data.files.map(f => f.id) }
-                    }
+            await filesRepository.bulkUpdate({
+                update: { sync_status: 'stale' },
+                where: {
+                    id: { [Op.in]: modifiedFiles.data.files.map(f => f.id) }
                 }
-            );
+            });
         }
 
-        // Initial sync
         await this.checkForNewFiles();
         await this.syncFiles();
 
-        // Run periodic sync
         setInterval(async () => {
             if (this.isInitialized) {
                 await this.checkForNewFiles();
@@ -179,7 +164,7 @@ class ETLService extends BaseService {
 
         this.isSyncing = true;
         try {
-            const filesToSync = await File.findAll({
+            const filesToSync = await filesRepository.findAll({
                 where: {
                     [Op.or]: [
                         { sync_status: 'pending' },

@@ -1,7 +1,6 @@
-// services/auth.service.js
 const googleService = require('./google.service');
 const etlService = require('./etl.service');
-const smartQueue = require('../queue/smart.queue');
+const smartQueue = require('../services/queue');
 
 class AuthService {
     constructor() {
@@ -12,7 +11,6 @@ class AuthService {
 
     async getGoogleAuthUrl() {
         try {
-            // Wait for service to be ready
             await this.googleService.waitForInit();
             return this.googleService.getAuthUrl();
         } catch (error) {
@@ -23,7 +21,6 @@ class AuthService {
 
     async handleGoogleCallback(code) {
         try {
-            // Set credentials and get auth
             await this.googleService.setCredentials(code);
             const auth = this.googleService.getAuth();
 
@@ -31,7 +28,6 @@ class AuthService {
                 throw new Error('Failed to obtain authentication');
             }
 
-            // Initialize dependent services
             await this.etlService.setAuth(auth);
             await this.smartQueue.setInitialized(true);
 
@@ -52,10 +48,8 @@ class AuthService {
 
     async validateAuthToken(token) {
         try {
-            // Wait for service to be ready
             await this.googleService.waitForInit();
 
-            // Implement token validation logic here
             const isValid = token && this.googleService.isAuthenticated;
 
             return {
@@ -75,17 +69,14 @@ class AuthService {
         try {
             await this.googleService.waitForInit();
 
-            // Reset authentication state
             this.googleService.isAuthenticated = false;
 
-            // Clear tokens file if it exists
             try {
                 await fs.unlink(this.googleService.tokensPath);
             } catch (err) {
                 // Ignore if file doesn't exist
             }
 
-            // Notify services
             this.etlService.setAuth(null);
             this.smartQueue.setInitialized(false);
 

@@ -1,8 +1,6 @@
-// services/google.service.js
 const { google } = require('googleapis');
 const path = require('path');
 const fs = require('fs').promises;
-const EventEmitter = require('events');
 const systemSettingsService = require('./system-settings.service');
 const BaseService = require('./base.service');
 
@@ -18,16 +16,13 @@ class GoogleService extends BaseService {
     }
 
     async waitForConfiguration() {
-        // First try to initialize
         const isInitialized = await this.initialize();
         if (isInitialized) return true;
 
-        // If not initialized, set up the waiting promise
         if (!this.configurationPromise) {
             this.configurationPromise = new Promise(resolve => {
                 this.configResolver = resolve;
 
-                // Set up a periodic check
                 const checkInterval = setInterval(async () => {
                     const initialized = await this.initialize();
                     if (initialized) {
@@ -59,7 +54,6 @@ class GoogleService extends BaseService {
 
             this.drive = google.drive({ version: 'v3', auth: this.auth });
 
-            // Set up token refresh handlers
             this.auth.on('tokens', async (tokens) => {
                 if (tokens.refresh_token || tokens.access_token) {
                     const currentTokens = await this.loadTokensFromFile();
@@ -75,7 +69,6 @@ class GoogleService extends BaseService {
                 this.emit('tokensUpdated', tokens);
             });
 
-            // Now add the authentication check
             await this.verifyAndInitializeAuth();
 
             this.markInitialized();
@@ -92,7 +85,6 @@ class GoogleService extends BaseService {
 
             if (loaded && this.auth.credentials) {
                 try {
-                    // Verify the credentials with a simple API call
                     await this.drive.files.list({ pageSize: 1 });
                     console.log('Google Auth initialized successfully');
                     this.isAuthenticated = true;
@@ -100,7 +92,6 @@ class GoogleService extends BaseService {
                     return true;
                 } catch (apiError) {
                     console.log('Stored credentials are invalid:', apiError.message);
-                    // Clear invalid tokens
                     await fs.unlink(this.tokensPath).catch(() => { });
                     this.isAuthenticated = false;
                     this.emit('authenticationFailed', apiError);
@@ -176,7 +167,6 @@ class GoogleService extends BaseService {
             await this.waitForInit();
             const { tokens } = await this.auth.getToken(code);
 
-            // Merge with existing tokens if any
             const existingTokens = await this.loadTokensFromFile();
             const mergedTokens = {
                 ...existingTokens,
@@ -231,7 +221,6 @@ class GoogleService extends BaseService {
         return this.auth;
     }
 
-    // File operations
     async listFiles({ pageSize, nextPageToken = null, query = null, filters = null }) {
         await this.waitForInit();
         try {

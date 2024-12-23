@@ -76,7 +76,6 @@ module.exports = {
       }
     });
 
-    // Add useful indexes
     await queryInterface.addIndex('files', ['sync_status']);
     await queryInterface.addIndex('files', ['modified_time']);
     await queryInterface.addIndex('files', ['trashed']);

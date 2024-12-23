@@ -21,7 +21,6 @@ module.exports = {
       }
     });
 
-    // Add indexes for better performance
     await queryInterface.addIndex('system_settings', ['key']);
   },
 

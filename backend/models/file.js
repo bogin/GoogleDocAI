@@ -4,18 +4,17 @@ module.exports = (sequelize) => {
     class File extends Model {
         static associate(models) {
             File.belongsTo(models.User, {
-                foreignKey: 'userId', // Consistent with Sequelize conventions
+                foreignKey: 'userId',
                 as: 'user',
             });
             File.hasMany(models.FileOwner, {
-                foreignKey: 'fileId', // Fix case for field name
+                foreignKey: 'fileId',
                 as: 'fileOwners',
             });
         }
 
 
         async safeDelete(userId) {
-            // Remove the user from file owners
             await sequelize.models.FileOwner.destroy({
                 where: {
                     fileId: this.id,
@@ -23,12 +22,10 @@ module.exports = (sequelize) => {
                 }
             });
 
-            // Check if any owners remain
             const remainingOwners = await sequelize.models.FileOwner.count({
                 where: { fileId: this.id }
             });
 
-            // If no owners remain, soft delete the file
             if (remainingOwners === 0) {
                 return this.destroy();
             }
@@ -126,7 +123,7 @@ module.exports = (sequelize) => {
         tableName: 'files',
         timestamps: true,
         underscored: true,
-        paranoid: true, // Enable soft delete
+        paranoid: true,
         indexes: [
             {
                 fields: ['sync_status']

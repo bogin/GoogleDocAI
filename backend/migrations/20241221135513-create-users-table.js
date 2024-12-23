@@ -44,11 +44,9 @@ module.exports = {
       }
     });
 
-    // Add indexes
     await queryInterface.addIndex('users', ['email']);
     await queryInterface.addIndex('users', ['permission_id']);
 
-    // Add foreign key to files table
     await queryInterface.addColumn('files', 'user_id', {
       type: Sequelize.INTEGER,
       references: {

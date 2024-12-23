@@ -1,20 +1,17 @@
-// scripts/setup-db.js
 const { Client } = require('pg');
 
 async function setupDatabase() {
-    // First connect to default 'postgres' database
     const adminClient = new Client({
         user: 'postgres',
         host: 'localhost',
         password: 'postgres',
-        database: 'postgres', // Connect to default database first
+        database: 'postgres',
         port: 5432
     });
 
     try {
         await adminClient.connect();
         
-        // Create user if not exists
         try {
             await adminClient.query(`
                 DO $$
@@ -30,14 +27,11 @@ async function setupDatabase() {
             console.log('User creation error:', err.message);
         }
 
-        // Check if database exists
         const dbCheckResult = await adminClient.query(`
             SELECT 1 FROM pg_database WHERE datname = 'unframe_dev'
         `);
 
-        // Create database if it doesn't exist
         if (dbCheckResult.rows.length === 0) {
-            // Disconnect all users from the database if it exists
             await adminClient.query(`
                 SELECT pg_terminate_backend(pg_stat_activity.pid)
                 FROM pg_stat_activity
@@ -51,7 +45,6 @@ async function setupDatabase() {
             console.log('Database already exists');
         }
 
-        // Reconnect to the new database to grant privileges
         await adminClient.end();
 
         const dbClient = new Client({

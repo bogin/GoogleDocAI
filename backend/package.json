@@ -6,8 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "queue": "node index2.js",
-    "queue_dev": "nodemon index2.js",
+    "queue": "node etl-process.js",
+    "queue_dev": "nodemon etl-process.js",
     "lint": "eslint .",
     "format": "prettier --write .",
     "db:migrate": "sequelize-cli db:migrate",

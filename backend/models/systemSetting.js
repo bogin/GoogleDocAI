@@ -2,11 +2,6 @@ const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class SystemSetting extends Model {
-    static associate(models) {
-      // Define associations here if needed
-    }
-
-    // Instance methods
     toJSON() {
       const values = { ...this.get() };
       return values;
@@ -41,7 +36,6 @@ module.exports = (sequelize, DataTypes) => {
     
     hooks: {
       beforeSave: async (setting) => {
-        // Convert string values to JSON if needed
         if (typeof setting.value === 'string') {
           try {
             setting.value = JSON.parse(setting.value);

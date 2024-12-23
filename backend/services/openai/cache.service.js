@@ -1,10 +1,31 @@
 const NodeCache = require('node-cache');
-const { redisClient, redisConfig } = require('../config/redis.config');
+const { redisClient, redisConfig } = require('../../config/redis.config');
 
+/**
+ * A multi-level caching service that combines in-memory and Redis caching strategies.
+ * 
+ * This service provides a two-tier caching mechanism:
+ * 1. In-memory cache (NodeCache): 
+ *    - Offers extremely fast access to recently used data
+ *    - Reduces load on Redis for frequently accessed items
+ *    - Provides local, rapid retrieval within a single server instance
+ * 
+ * 2. Distributed Redis Cache:
+ *    - Serves as a persistent, sharable cache across multiple server instances
+ *    - Provides data durability and cross-service cache sharing
+ *    - Acts as a backup and shared storage mechanism
+ * 
+ * Caching Strategy:
+ * - First checks the in-memory cache for data
+ * - If not found, queries the Redis cache
+ * - When data is retrieved from Redis, it's also stored in the in-memory cache
+ * - Supports configurable Time-To-Live (TTL) for cached items
+ * 
+ * @class
+ */
 class CacheService {
     constructor() {
-        // In-memory cache for fast access
-        this.memoryCache = new NodeCache({ 
+        this.memoryCache = new NodeCache({
             stdTTL: redisConfig.defaultTTL,
             checkperiod: 120
         });
@@ -12,17 +33,14 @@ class CacheService {
 
     async get(key) {
         try {
-            // Try memory cache first
             const memoryResult = this.memoryCache.get(key);
             if (memoryResult) {
                 return memoryResult;
             }
 
-            // Try Redis if not in memory
             const redisResult = await redisClient.get(redisConfig.keyPrefix + key);
             if (redisResult) {
                 const parsed = JSON.parse(redisResult);
-                // Store in memory cache for faster subsequent access
                 this.memoryCache.set(key, parsed);
                 return parsed;
             }
@@ -36,7 +54,6 @@ class CacheService {
 
     async set(key, value, ttl = redisConfig.defaultTTL) {
         try {
-            // Store in both caches
             this.memoryCache.set(key, value, ttl);
             await redisClient.set(
                 redisConfig.keyPrefix + key,

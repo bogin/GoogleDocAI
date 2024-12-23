@@ -5,7 +5,6 @@ const redisConfig = {
     port: process.env.REDIS_PORT || 6379,
     password: process.env.REDIS_PASSWORD,
     keyPrefix: 'openai:query:',
-    // Default cache time: 1 hour
     defaultTTL: 3600
 };
 

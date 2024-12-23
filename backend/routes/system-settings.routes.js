@@ -1,26 +1,57 @@
 const express = require('express');
-const rateLimit = require('express-rate-limit');
+const { createRateLimiter } = require('../middlewares/rateLimiter.middleware');
+const { handleValidationErrors } = require('../middlewares/validator.middleware');
+const {
+  addSecurityHeaders,
+  configureCors
+} = require('../middlewares/security.middleware');
+const {
+  validateSettingKey,
+  validateSettingValue,
+  validateBatchSettings
+} = require('../validators/systemSettings.validator');
 const systemSettingsController = require('../controllers/system-settings.controller');
 
 const router = express.Router();
 
-// Rate limiter for settings routes
-const settingsLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later',
-  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+const settingsLimiterMiddleware = createRateLimiter({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: 'Too many settings operations'
 });
 
-// Apply rate limiter to all routes in this router
-router.use(settingsLimiter);
+router.use([
+  settingsLimiterMiddleware,
+  addSecurityHeaders({ strict: true }),
+  configureCors({
+    methods: 'GET,PUT,POST',
+    maxAge: '3600'
+  })
+]);
 
-// Routes
 router.get('/', systemSettingsController.getAll);
-router.get('/:key', systemSettingsController.get);
-router.put('/:key', systemSettingsController.update);
-router.post('/', systemSettingsController.create)
-router.put('/', systemSettingsController.updateBatch);
+router.get('/:key',
+  validateSettingKey,
+  handleValidationErrors,
+  systemSettingsController.get
+);
+
+router.post('/',
+  [...validateSettingKey, ...validateSettingValue],
+  handleValidationErrors,
+  systemSettingsController.create
+);
+
+router.put('/:key',
+  [...validateSettingKey, ...validateSettingValue],
+  handleValidationErrors,
+  systemSettingsController.update
+);
+
+router.put('/',
+  validateBatchSettings,
+  handleValidationErrors,
+  systemSettingsController.updateBatch
+);
 
 module.exports = router;

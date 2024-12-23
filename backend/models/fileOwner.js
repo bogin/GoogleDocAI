@@ -3,7 +3,6 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
     class FileOwner extends Model {
         static associate(models) {
-            // associations can be defined here
             FileOwner.belongsTo(models.File, {
                 foreignKey: 'file_id',
                 onDelete: 'CASCADE'

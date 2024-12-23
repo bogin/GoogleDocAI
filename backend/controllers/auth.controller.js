@@ -16,20 +16,13 @@ class AuthController {
     async handleGoogleCallback(req, res) {
         try {
             const { code } = req.query;
-
-            if (!code || typeof code !== 'string') {
-                return res.status(400).json({
-                    error: 'Invalid authentication code'
-                });
-            }
-
             const authResult = await authService.handleGoogleCallback(code);
 
-            if (authResult.success) {
-                res.send('Authentication successful! You can close this window.');
-            } else {
+            if (!authResult.success) {
                 throw new Error('Authentication failed');
             }
+
+            res.send('Authentication successful! You can close this window.');
         } catch (error) {
             console.error('Auth callback error:', error);
             res.status(500).json({

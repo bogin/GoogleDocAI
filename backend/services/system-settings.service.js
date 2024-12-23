@@ -1,10 +1,9 @@
-const { SystemSetting } = require('../models');
+const systemSettingsRepository = require('../repo/systemSettings.repository');
 
 class SystemSettingsService {
     async getAll() {
         try {
-            const settings = await SystemSetting.findAll();
-            return settings;
+            return await systemSettingsRepository.findAll();
         } catch (error) {
             throw new Error('Failed to fetch system settings: ' + error.message);
         }
@@ -12,8 +11,7 @@ class SystemSettingsService {
 
     async get(key) {
         try {
-            const setting = await SystemSetting.findByPk(key);
-            return setting;
+            return await systemSettingsRepository.findByKey(key);
         } catch (error) {
             throw new Error(`Failed to fetch setting ${key}: ${error.message}`);
         }
@@ -21,11 +19,7 @@ class SystemSettingsService {
 
     async update(key, value) {
         try {
-            const [setting] = await SystemSetting.upsert({
-                key,
-                value,
-            });
-            return setting;
+            return await systemSettingsRepository.upsert(key, value);
         } catch (error) {
             throw new Error(`Failed to update setting ${key}: ${error.message}`);
         }
@@ -33,41 +27,24 @@ class SystemSettingsService {
 
     async create(key, value) {
         try {
-            // Check if setting exists
             const existing = await this.get(key);
             if (existing) {
                 throw new Error(`Setting with key ${key} already exists`);
             }
-
-            // Create new setting
-            const setting = await SystemSetting.create({
-                key,
-                value,
-            });
-            return setting;
+            return await systemSettingsRepository.create(key, value);
         } catch (error) {
             throw new Error(`Failed to create setting ${key}: ${error.message}`);
         }
     }
 
     async updateBatch(settings) {
-        const t = await SystemSetting.sequelize.transaction();
+        const transaction = await systemSettingsRepository.SystemSetting.sequelize.transaction();
         try {
-            const results = await Promise.all(
-                settings.map(({ key, value }) =>
-                    SystemSetting.upsert(
-                        {
-                            key,
-                            value,
-                        },
-                        { transaction: t }
-                    )
-                )
-            );
-            await t.commit();
+            const results = await systemSettingsRepository.updateBatch(settings, transaction);
+            await transaction.commit();
             return results.map(([setting]) => setting);
         } catch (error) {
-            await t.rollback();
+            await transaction.rollback();
             throw new Error('Failed to update settings: ' + error.message);
         }
     }

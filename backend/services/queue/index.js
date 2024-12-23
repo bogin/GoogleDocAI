@@ -1,8 +1,7 @@
-const { File } = require('../models');
 const { Op } = require('sequelize');
-const BaseService = require('../services/base.service');
-const googleService = require('../services/google.service');
-
+const BaseService = require('../base.service');
+const googleService = require('../google.service');
+const filesRepository = require('../../repo/files.repository');
 
 class SyncQueue extends BaseService {
     constructor() {
@@ -51,7 +50,7 @@ class SyncQueue extends BaseService {
 
     async checkForChanges() {
         try {
-            const modifiedFiles = await File.findAll({
+            const modifiedFiles = await filesRepository.findAll({
                 where: {
                     [Op.or]: [
                         {
@@ -100,7 +99,7 @@ class SyncQueue extends BaseService {
 
     async processTask(task) {
         if (this.processor) {
-            await this.processor(task);
+            await this.processor.processFiles(task);
         }
     }
 
@@ -108,5 +107,6 @@ class SyncQueue extends BaseService {
         this.processor = processor;
     }
 }
+
 const syncQueue = new SyncQueue();
 module.exports = syncQueue

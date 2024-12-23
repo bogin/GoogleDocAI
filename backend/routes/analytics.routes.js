@@ -1,26 +1,45 @@
 const express = require('express');
-const { body } = require('express-validator');
-const router = express.Router();
+const { createRateLimiter } = require('../middlewares/rateLimiter.middleware');
+const {
+    addSecurityHeaders,
+    configureCors,
+    configureCSP
+} = require('../middlewares/security.middleware');
+const { handleValidationErrors } = require('../middlewares/validator.middleware');
+const { validateAnalyticsQuery } = require('../validators/analytics.validator');
 const analyticsController = require('../controllers/analytics.controller');
-const rateLimit = require('express-rate-limit');
 
-// Analytics-specific rate limiter
-const analyticsLimiter = rateLimit({
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 50, // Limit each IP to 50 requests per windowMs
-    message: 'Too many analytics requests, please try again later'
+const router = express.Router();
+
+const analyticsLimiterMiddleware = createRateLimiter({
+    windowMs: 15 * 60 * 1000,
+    max: 50,
+    message: 'Too many analytics requests',
+    standardHeaders: true,
+    legacyHeaders: false,
+    skipSuccessfulRequests: false
 });
 
-// Validation middleware
-const validateAnalyticsRequest = [
-    body('query').isString().trim().notEmpty().escape()
-];
+router.use([
+    analyticsLimiterMiddleware,
+    addSecurityHeaders({ strict: true }),
+    configureCors({
+        methods: 'POST',
+        maxAge: '3600',
+        allowedHeaders: ['Content-Type', 'Authorization']
+    }),
+    configureCSP({
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
+        connectSrc: ["'self'"],
+        reportUri: '/csp-report'
+    }),
+]);
 
-router.post(
-    '/analyze',
-    analyticsLimiter,
-    validateAnalyticsRequest,
-    analyticsController.analyzeFiles.bind(analyticsController)
+router.post('/analyze',
+    validateAnalyticsQuery,
+    handleValidationErrors,
+    analyticsController.analyzeFiles
 );
 
 module.exports = router;
