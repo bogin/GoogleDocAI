@@ -1,4 +1,5 @@
-import { Column, File, Permission } from '@/types/files'
+import { File, Permission } from '@/types/files'
+import { Column } from '@/types/generic'
 
 const formatDate = (date: string | null) => {
   return date ? new Date(date).toLocaleString() : 'N/A'
@@ -74,7 +75,8 @@ export const defaultColumns: Column[] = [
     visible: true,
     sortable: true,
     width: '150px',
-    formatter: (_, file) => getUsersByRole(file.permissions, 'owner'),
+    formatter: (_: any, file: File) =>
+      getUsersByRole(file.permissions, 'owner'),
   },
   {
     key: 'access',
@@ -82,7 +84,7 @@ export const defaultColumns: Column[] = [
     visible: true,
     sortable: false,
     width: '200px',
-    formatter: (_, file) => getAccessSummary(file.permissions),
+    formatter: (_: any, file: File) => getAccessSummary(file.permissions),
   },
   {
     key: 'anyoneAccess',
@@ -90,7 +92,7 @@ export const defaultColumns: Column[] = [
     visible: true,
     sortable: false,
     width: '150px',
-    formatter: (_, file) => getAnyoneAccess(file.permissions),
+    formatter: (_: any, file: File) => getAnyoneAccess(file.permissions),
   },
   {
     key: 'commenters',
@@ -98,7 +100,8 @@ export const defaultColumns: Column[] = [
     visible: true,
     sortable: false,
     width: '200px',
-    formatter: (_, file) => getUsersByRole(file.permissions, 'commenter'),
+    formatter: (_: any, file: File) =>
+      getUsersByRole(file.permissions, 'commenter'),
   },
   {
     key: 'modifiedTime',
@@ -114,7 +117,7 @@ export const defaultColumns: Column[] = [
     visible: true,
     sortable: true,
     width: '150px',
-    formatter: (value) => value || 'N/A',
+    formatter: (value: string) => value || 'N/A',
   },
   {
     key: 'size',
@@ -134,7 +137,7 @@ export const defaultColumns: Column[] = [
   {
     key: 'shared',
     label: 'Shared',
-    visible: false, // Hidden by default since we have better sharing columns now
+    visible: false,
     sortable: true,
     width: '100px',
     formatter: (value: boolean) => (value ? 'Yes' : 'No'),
@@ -144,7 +147,7 @@ export const defaultColumns: Column[] = [
     label: 'Link',
     visible: true,
     width: '100px',
-    formatter: (value) => value || 'No link',
+    formatter: (value: string) => value || 'No link',
   },
   {
     key: 'actions',

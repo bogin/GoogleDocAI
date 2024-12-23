@@ -12,7 +12,6 @@
       />
     </div>
 
-    <!-- Results Section -->
     <div v-if="isLoading" class="results-loading">
       <div class="loading-spinner"></div>
       <p>Analyzing your files...</p>
@@ -90,7 +89,6 @@ export default defineComponent({
     const searchInResults = ref('')
     const expandedItems = ref<Record<number, boolean>>({})
 
-    // Computed properties from store
     const isLoading = computed(() => store.state.analytics.isLoading)
     const error = computed(() => store.state.analytics.error)
     const hasResults = computed(() => store.getters['analytics/hasResults'])
@@ -100,7 +98,6 @@ export default defineComponent({
     const totalItems = computed(() => store.state.analytics.totalItems)
     const queryTime = computed(() => store.state.analytics.queryTime)
 
-    // Filter results based on search
     const filteredResults = computed(() => {
       if (!searchInResults.value || !Array.isArray(formattedResults.value)) {
         return formattedResults.value

@@ -48,21 +48,12 @@ export interface File {
     emailAddress: string
     photoLink?: string
   }
-  owner?: {
+  owners?: {
     displayName: string
     emailAddress: string
     photoLink?: string
-  }
+  }[]
   permissions: Permission[]
-}
-
-export interface Column {
-  key: keyof File | string
-  label: string
-  visible: boolean
-  sortable?: boolean
-  width?: string
-  formatter?: (value: any, file: File) => string
 }
 
 export interface FileUpdatePayload {

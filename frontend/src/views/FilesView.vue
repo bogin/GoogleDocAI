@@ -70,7 +70,7 @@
     </div>
 
     <!-- Pagination Section -->
-    <AppPagination
+    <TablePagination
       v-if="!error"
       :pagination="pagination"
       :page-size="pageSize"
@@ -86,11 +86,11 @@ import { useStore } from 'vuex'
 import TextFilter from '@/components/filters/TextFilter.vue'
 import DateFilter from '@/components/filters/DateFilter.vue'
 import FilesTable from '../components/FilesTable/FilesTable.vue'
-import AppPagination from '@/components/AppPagination.vue'
+import TablePagination from '../components/Table/TablePagination.vue'
 
 export default defineComponent({
   name: 'FilesView',
-  components: { TextFilter, DateFilter, FilesTable, AppPagination },
+  components: { TextFilter, DateFilter, FilesTable, TablePagination },
 
   setup() {
     const store = useStore()
@@ -101,7 +101,6 @@ export default defineComponent({
       modifiedAfter: null as string | null,
     })
 
-    // Computed properties
     const files = computed(() => store.state.files.items)
     const loading = computed(() => store.state.files.loading)
     const error = computed(() => store.state.files.error)
@@ -134,7 +133,6 @@ export default defineComponent({
       Boolean(filters.value.query || filters.value.modifiedAfter)
     )
 
-    // Methods
     const fetchFiles = () => {
       store.dispatch('files/fetchFiles', {
         page: currentPage.value,
@@ -145,7 +143,6 @@ export default defineComponent({
     }
 
     const retryFetch = () => {
-      // Reset error state and try fetching again
       store.commit('files/SET_ERROR', null)
       fetchFiles()
     }

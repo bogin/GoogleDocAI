@@ -8,7 +8,6 @@ import {
   RootState,
 } from '../../types/systemSettings'
 
-// Define payload interfaces
 interface UpdateSettingPayload {
   key: any
   value: OpenAISettings | GoogleSettings

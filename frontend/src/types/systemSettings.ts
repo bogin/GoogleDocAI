@@ -1,4 +1,3 @@
-// src/types/systemSettings.ts
 export interface SystemSetting {
   key: string
   value: any

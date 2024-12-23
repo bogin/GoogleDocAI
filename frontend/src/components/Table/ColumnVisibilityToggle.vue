@@ -6,7 +6,7 @@
       ref="toggleButton"
     >
       <span>Columns</span>
-      <span class="icon">⚙️</span>
+      <AppIcon type="settings" />
     </button>
 
     <div
@@ -17,6 +17,11 @@
     >
       <div class="dropdown-header">
         <h3>Visible Columns</h3>
+        <AppButton
+          class="reset-button"
+          @click="resetToDefault"
+          text="Reset"
+        ></AppButton>
         <button class="reset-button" @click="resetToDefault">Reset</button>
       </div>
       <div class="columns-list">
@@ -40,11 +45,14 @@
 
 <script lang="ts">
 import { defineComponent, ref, onMounted, onUnmounted, PropType } from 'vue'
-import { Column } from '@/types/files'
-import { defaultColumns } from './configuration'
+import { defaultColumns } from '../FilesTable/configuration'
+import { Column } from '@/types/generic'
+import AppIcon from '../AppIcon.vue'
+import AppButton from '../AppButton.vue'
 
 export default defineComponent({
   name: 'ColumnVisibilityToggle',
+  components: { AppIcon, AppButton },
 
   props: {
     columns: {

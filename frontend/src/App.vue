@@ -75,7 +75,6 @@
 </template>
 
 <style lang="scss">
-// Reset and base styles
 * {
   margin: 0;
   padding: 0;
@@ -89,14 +88,12 @@ body {
   background: #f5f7fa;
 }
 
-// App container
 .app {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
 
-// Navbar styles
 .navbar {
   display: flex;
   align-items: center;
@@ -200,7 +197,6 @@ body {
   }
 }
 
-// Main content area
 .main-content {
   flex: 1;
   padding: 2rem;
@@ -208,7 +204,6 @@ body {
   width: 100%;
 }
 
-// Footer
 .footer {
   padding: 1.5rem;
   text-align: center;
@@ -218,7 +213,6 @@ body {
   border-top: 1px solid #e2e8f0;
 }
 
-// Transition animations
 .fade-enter-active,
 .fade-leave-active {
   transition: opacity 0.2s ease;
@@ -229,7 +223,6 @@ body {
   opacity: 0;
 }
 
-// Responsive design
 @media (max-width: 768px) {
   .navbar {
     padding: 0.75rem 1rem;
@@ -252,7 +245,6 @@ body {
   }
 }
 
-// Custom scrollbar
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;

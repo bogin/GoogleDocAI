@@ -204,7 +204,7 @@ export default defineComponent({
 
     const maskApiKey = (key?: string): string => {
       if (!key) return '••••••••'
-      return `sk-••••${key.slice(-4)}`
+      return `${key.slice(0, 2)}-••••${key.slice(-4)}`
     }
 
     const maskString = (str?: string): string => {
@@ -225,7 +225,6 @@ export default defineComponent({
       store.dispatch('systemSettings/fetchSettings')
     })
 
-    // Computed properties
     const isLoading = computed(() => store.state.systemSettings?.isLoading)
     const error = computed(() => store.state.systemSettings?.error)
     const openAISettings = computed(

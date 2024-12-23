@@ -1,4 +1,3 @@
-// src/store/modules/analytics.ts
 import axios from 'axios'
 import { Module, ActionContext } from 'vuex'
 import {
@@ -8,7 +7,6 @@ import {
 } from '@/types/analytics'
 import { RootState } from '@/types'
 
-// Define the context type for our actions
 type AnalyticsContext = ActionContext<AnalyticsState, RootState>
 
 const state: AnalyticsState = {

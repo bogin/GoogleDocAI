@@ -53,22 +53,6 @@
             </label>
           </template>
 
-          <!-- Radio -->
-          <template v-if="field.type === 'radio'">
-            <label class="field-label">{{ field.label }}</label>
-            <div class="radio-group">
-              <label v-for="option in field.options" :key="option.value">
-                <input
-                  type="radio"
-                  :name="field.name"
-                  :value="option.value"
-                  v-model="formData[field.name]"
-                />
-                {{ option.label }}
-              </label>
-            </div>
-          </template>
-
           <!-- Error message -->
           <span class="error-message" v-if="errors[field.name]">
             {{ errors[field.name] }}
@@ -125,7 +109,6 @@ export default defineComponent({
   },
 
   setup(props, { emit }) {
-    // Initialize formData with empty object if initialData is null
     const formData = ref<Record<string, any>>(props.initialData || {})
     const errors = ref<FormErrors>({})
     const isSubmitting = ref(false)
@@ -134,7 +117,6 @@ export default defineComponent({
       () => props.initialData && Object.keys(props.initialData).length > 0
     )
 
-    // Update formData when initialData changes
     watch(
       () => props.initialData,
       (newData) => {

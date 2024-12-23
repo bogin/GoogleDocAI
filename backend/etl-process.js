@@ -41,7 +41,6 @@ class BackgroundService extends EventEmitter {
 
             syncQueue.setProcessor(fileProcessor);
 
-            // Wait for Google service initialization
             console.log('Waiting for Google settings...');
             await this.waitForGoogleSettings();
             console.log('Google service configured from DB');

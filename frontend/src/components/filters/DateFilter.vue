@@ -7,24 +7,24 @@
         @change="handleDateChange"
         class="date-input"
       />
-      <button
+      <AppButton
         v-if="startDate"
         @click="clearDate"
         class="clear-date-btn"
-        title="Clear date"
-      >
-        ×
-      </button>
+        text="Clear date"
+        icon="close"
+      ></AppButton>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import AppButton from '../AppButton.vue'
 
 export default defineComponent({
   name: 'DateFilter',
-
+  components: { AppButton },
   props: {
     startDate: {
       type: String,
@@ -37,12 +37,10 @@ export default defineComponent({
   methods: {
     handleDateChange(event: Event) {
       const input = event.target as HTMLInputElement
-      // Emit the new date value
       this.$emit('update:modelValue', input.value || null)
     },
 
     clearDate() {
-      // Emit null to clear the date
       this.$emit('update:modelValue', null)
     },
   },
