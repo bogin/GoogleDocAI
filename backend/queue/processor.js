@@ -24,6 +24,9 @@ const processOwner = async (ownerData) => {
             }
         }
 
+        // Update user stats after processing
+        await user.updateStats();
+
         return user;
     } catch (error) {
         console.error('Error processing owner:', error);
@@ -135,10 +138,10 @@ const sanitizeFileData = (fileData) => {
 const getUniqueUserPermissions = (fileData) => {
     // Combine owners and permissions arrays
     const allPermissions = [...(fileData.owners || []), ...(fileData.permissions || [])];
-    
+
     // Filter for user type permissions and remove duplicates based on permissionId/id
     const uniquePermissions = new Map();
-    
+
     allPermissions.forEach(permission => {
         // Skip non-user permissions
         if (permission.type === 'anyone' || permission.type === 'domain') {
@@ -173,6 +176,7 @@ const getUniqueUserPermissions = (fileData) => {
 const processFiles = async (task) => {
     const { type, files } = task;
     const results = { success: 0, failed: 0, errors: [] };
+    const updatedUsers = new Set(); // Track unique users that need stats update
 
     for (const fileData of files) {
         try {
@@ -201,6 +205,7 @@ const processFiles = async (task) => {
                                 permissionRole: permissionData.role || 'reader'
                             }
                         });
+                        updatedUsers.add(user.id); // Add user to the set of users needing update
                     } catch (error) {
                         console.warn(`Duplicate file owner entry skipped for file ${file.id} and user ${user.id}`);
                     }
@@ -217,7 +222,21 @@ const processFiles = async (task) => {
             });
         }
     }
-    console.log(JSON.stringify(results, null, 4))
+
+    // Update stats for all affected users after processing all files
+    try {
+        const users = await User.findAll({
+            where: {
+                id: Array.from(updatedUsers)
+            }
+        });
+        
+        await Promise.all(users.map(user => user.updateStats()));
+    } catch (error) {
+        console.error('Error updating user stats:', error);
+    }
+
+    console.log(JSON.stringify(results, null, 4));
     return results;
 };
 
