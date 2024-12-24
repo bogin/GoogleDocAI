@@ -16,14 +16,15 @@ interface FetchFilesPayload {
 }
 
 interface FetchFilesResponse {
-  files: File[]
-  pagination: {
+  files?: File[]
+  pagination?: {
     currentPage: number
     pageSize: number
     totalItems: number
     totalPages: number
     hasNextPage: boolean
   }
+  error?: string
 }
 
 const files: Module<FilesState, RootState> = {
@@ -73,7 +74,13 @@ const files: Module<FilesState, RootState> = {
             ? JSON.stringify(payload.filters)
             : undefined,
         })
-
+        console.log(response)
+        if (response.data.error) {
+          console.log(response.data.error)
+          commit('SET_ERROR', response.data.error)
+          commit('SET_LOADING', false)
+          return
+        }
         commit('SET_FILES', {
           files: response.data.files,
           pagination: response.data.pagination,

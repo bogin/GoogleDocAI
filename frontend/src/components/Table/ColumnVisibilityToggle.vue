@@ -29,8 +29,9 @@
           :key="column.key"
           class="column-option"
         >
-          <input
+          <AppInput
             type="checkbox"
+            :name="`column-${column.key}`"
             :checked="column.visible"
             @change="toggleColumn(column)"
             :disabled="column.key === 'name' || column.key === 'actions'"
@@ -48,10 +49,11 @@ import { defaultColumns } from '../FilesTable/configuration'
 import { Column } from '@/types/generic'
 import AppButton from '../AppButton.vue'
 import AppIcon from '../AppIcon.vue'
+import AppInput from '../AppInput.vue'
 
 export default defineComponent({
   name: 'ColumnVisibilityToggle',
-  components: { AppIcon, AppButton },
+  components: { AppIcon, AppButton, AppInput },
 
   props: {
     columns: {

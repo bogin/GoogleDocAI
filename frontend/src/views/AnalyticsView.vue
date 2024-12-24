@@ -27,9 +27,11 @@
         <p class="results-stats">
           Found {{ totalItems }} results ({{ queryTime }}ms)
         </p>
-        <input
-          v-model="searchInResults"
+
+        <AppInput
           type="text"
+          name="searchResults"
+          v-model="searchInResults"
           placeholder="Search in results..."
           class="results-search"
         />
@@ -78,10 +80,11 @@ import { defineComponent, ref, computed } from 'vue'
 import { useStore } from 'vuex'
 import TextSearchFilter from '../components/filters/TextFilter.vue'
 import type { FormattedResult } from '@/types/analytics'
+import AppInput from '@/components/AppInput.vue'
 
 export default defineComponent({
   name: 'AnalyticsView',
-  components: { TextSearchFilter },
+  components: { TextSearchFilter, AppInput },
 
   setup() {
     const store = useStore()

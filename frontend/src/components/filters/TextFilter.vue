@@ -1,27 +1,19 @@
 <template>
   <div class="search-container">
     <div class="search-box" :class="{ 'is-focused': isFocused }">
-      <AppButton @click="handleSearch" classes="search-icon" icon="search">
-      </AppButton>
-
-      <input
-        type="text"
-        :value="modelValue"
-        @input="handleInput"
-        @keyup.enter="handleSearch"
-        @focus="isFocused = true"
-        @blur="isFocused = false"
-        placeholder="Search files..."
-        class="search-input"
+      <AppButton @click="handleSearch" classes="search-icon" icon="search" />
+      <AppButton
+        v-if="localSearchValue"
+        @click="clearSearch"
+        classes="clear-button"
+        icon="close"
       />
-      <AppButton @click="clearSearch" classes="clear-button" icon="close">
-      </AppButton>
     </div>
   </div>
 </template>
 
 <script lang="ts">
-import { defineComponent, ref } from 'vue'
+import { defineComponent, ref, watch } from 'vue'
 import AppButton from '../AppButton.vue'
 
 export default defineComponent({
@@ -38,29 +30,48 @@ export default defineComponent({
 
   setup(props, { emit }) {
     const isFocused = ref(false)
-    const searchValue = ref(props.modelValue)
+    const localSearchValue = ref(props.modelValue)
 
-    const handleInput = (event: Event) => {
-      const value = (event.target as HTMLInputElement).value
-      emit('update:modelValue', value)
-    }
+    watch(
+      () => props.modelValue,
+      (newValue) => {
+        localSearchValue.value = newValue
+      }
+    )
 
     const handleSearch = () => {
-      if (props.modelValue.trim()) {
-        emit('search', props.modelValue)
+      const trimmedValue = localSearchValue.value.trim()
+      if (trimmedValue) {
+        emit('update:modelValue', trimmedValue)
+        emit('search', trimmedValue)
       }
     }
 
     const clearSearch = () => {
+      localSearchValue.value = ''
       emit('update:modelValue', '')
       emit('search', '')
     }
 
+    const onFocus = () => {
+      isFocused.value = true
+    }
+
+    const onBlur = () => {
+      isFocused.value = false
+    }
+
+    watch(localSearchValue, (newValue) => {
+      emit('update:modelValue', newValue)
+    })
+
     return {
+      localSearchValue,
       isFocused,
-      handleInput,
       handleSearch,
       clearSearch,
+      onFocus,
+      onBlur,
     }
   },
 })
@@ -83,12 +94,7 @@ export default defineComponent({
   padding: 0 8px;
   transition: all 0.2s;
 
-  &:hover {
-    background-color: #fff;
-    box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
-    border-color: rgba(223, 225, 229, 0);
-  }
-
+  &:hover,
   &.is-focused {
     background-color: #fff;
     box-shadow: 0 1px 6px rgba(32, 33, 36, 0.28);
@@ -109,26 +115,12 @@ export default defineComponent({
   padding: 0;
 }
 
-.search-icon {
-  padding: 0 8px;
-  height: 44px;
-  line-height: 44px;
-  color: #9aa0a6;
-  background: none;
-  border: none;
-  cursor: pointer;
-
-  &:hover {
-    color: #202124;
-  }
-}
-
+.search-icon,
 .clear-button {
   padding: 0 8px;
   height: 44px;
   line-height: 44px;
-  color: #70757a;
-  font-size: 24px;
+  color: #9aa0a6;
   background: none;
   border: none;
   cursor: pointer;

@@ -12,12 +12,11 @@
 
       <form @submit.prevent="handleSubmit" class="form">
         <div v-for="field in formConfig" :key="field.name" class="form-group">
-          <!-- Input text/number -->
           <template v-if="field.type === 'text' || field.type === 'number'">
-            <label :for="field.name">{{ field.label }}</label>
-            <input
+            <AppInput
               :type="field.type"
-              :id="field.name"
+              :name="field.name"
+              :label="field.label"
               v-model="formData[field.name]"
               :placeholder="field.placeholder || ''"
               :required="field.required"
@@ -25,7 +24,6 @@
               :max="field.max"
             />
           </template>
-
           <!-- Select -->
           <template v-if="field.type === 'select'">
             <label :for="field.name">{{ field.label }}</label>
@@ -45,16 +43,13 @@
             </select>
           </template>
 
-          <!-- Checkbox -->
           <template v-if="field.type === 'checkbox'">
-            <label class="checkbox-label">
-              <input
-                type="checkbox"
-                v-model="formData[field.name]"
-                :id="field.name"
-              />
-              {{ field.label }}
-            </label>
+            <AppInput
+              type="checkbox"
+              :name="field.name"
+              :label="field.label"
+              v-model="formData[field.name]"
+            />
           </template>
 
           <!-- Error message -->
@@ -87,10 +82,11 @@ import { File } from '@/types/files'
 import { FormField, FormErrors } from '@/types/formField'
 import { defineComponent, ref, computed, PropType, watch } from 'vue'
 import AppButton from './AppButton.vue'
+import AppInput from './AppInput.vue'
 
 export default defineComponent({
   name: 'DynamicForm',
-  components: { AppButton },
+  components: { AppButton, AppInput },
   props: {
     show: {
       type: Boolean,

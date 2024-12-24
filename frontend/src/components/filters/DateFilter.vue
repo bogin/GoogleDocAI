@@ -1,8 +1,9 @@
 <template>
   <div class="date-range">
     <div class="date-input-wrapper">
-      <input
+      <AppInput
         type="datetime-local"
+        name="startDate"
         :value="startDate"
         @change="handleDateChange"
         class="date-input"
@@ -21,10 +22,11 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import AppButton from '../AppButton.vue'
+import AppInput from '../AppInput.vue'
 
 export default defineComponent({
   name: 'DateFilter',
-  components: { AppButton },
+  components: { AppButton, AppInput },
   props: {
     startDate: {
       type: String,

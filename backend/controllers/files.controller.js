@@ -14,6 +14,7 @@ class FilesController {
 
       res.json(result);
     } catch (error) {
+      res.json({ error: error.message });
       next(error);
     }
   }
