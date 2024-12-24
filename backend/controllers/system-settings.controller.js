@@ -26,7 +26,7 @@ class SystemSettingsController {
     try {
       const setting = await systemSettingsService.update(
         req.params.key,
-        req.body.value
+        req.body
       );
       res.json(setting);
     } catch (error) {

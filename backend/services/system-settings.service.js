@@ -19,7 +19,7 @@ class SystemSettingsService {
 
     async update(key, value) {
         try {
-            return await systemSettingsRepository.upsert(key, value);
+            return await systemSettingsRepository.upsert({key, value});
         } catch (error) {
             throw new Error(`Failed to update setting ${key}: ${error.message}`);
         }

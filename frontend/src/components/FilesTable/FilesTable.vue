@@ -170,7 +170,6 @@ export default defineComponent({
     }
 
     const handleEdit = (file: File) => {
-      console.log('!!@!24312343214')
       editingFile.value = { ...file }
       showForm.value = true
     }

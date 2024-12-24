@@ -3,7 +3,11 @@
     <div class="modal-content" @click.stop>
       <div class="modal-header">
         <h3>{{ isEdit ? 'Edit' : 'Create' }} {{ title }}</h3>
-        <button class="close-button" @click="closeModal">×</button>
+        <AppButton
+          @click="closeModal"
+          classes="close-button"
+          icon="close"
+        ></AppButton>
       </div>
 
       <form @submit.prevent="handleSubmit" class="form">
@@ -60,16 +64,18 @@
         </div>
 
         <div class="form-actions">
-          <button type="button" class="btn btn-secondary" @click="closeModal">
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="btn btn-primary"
+          <AppButton
+            @click="closeModal"
+            classes="btn btn-secondary"
+            text="Cancel"
+          ></AppButton>
+
+          <AppButton
+            classes="btn btn-primary"
+            :text="isSubmitting ? 'Saving...' : isEdit ? 'Update' : 'Create'"
             :disabled="isSubmitting"
-          >
-            {{ isSubmitting ? 'Saving...' : isEdit ? 'Update' : 'Create' }}
-          </button>
+            buttonType="submit"
+          ></AppButton>
         </div>
       </form>
     </div>
@@ -80,9 +86,11 @@
 import { File } from '@/types/files'
 import { FormField, FormErrors } from '@/types/formField'
 import { defineComponent, ref, computed, PropType, watch } from 'vue'
+import AppButton from './AppButton.vue'
 
 export default defineComponent({
   name: 'DynamicForm',
+  components: { AppButton },
   props: {
     show: {
       type: Boolean,

@@ -15,7 +15,12 @@
 
     <div v-else-if="error" class="error-container">
       <p class="error-message">{{ error }}</p>
-      <button @click="retryLoad" class="retry-button">Retry</button>
+
+      <AppButton
+        @click="retryLoad"
+        classes="retry-button"
+        text="Retry"
+      ></AppButton>
     </div>
 
     <div v-else class="settings-grid">
@@ -23,9 +28,12 @@
       <div class="settings-card">
         <div class="card-header">
           <h2>OpenAI Integration</h2>
-          <button @click="showOpenAIForm = true" class="edit-button">
-            Edit
-          </button>
+
+          <AppButton
+            @click="showOpenAIForm = true"
+            classes="edit-button"
+            text="Edit"
+          ></AppButton>
         </div>
         <div class="card-content">
           <div class="setting-item">
@@ -45,9 +53,12 @@
       <div class="settings-card">
         <div class="card-header">
           <h2>Google Integration</h2>
-          <button @click="showGoogleForm = true" class="edit-button">
-            Edit
-          </button>
+
+          <AppButton
+            @click="showGoogleForm = true"
+            classes="edit-button"
+            text="Edit"
+          ></AppButton>
         </div>
         <div class="card-content">
           <div class="setting-item">
@@ -100,18 +111,15 @@ import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import DynamicForm from '@/components/DynamicForm.vue'
 import type { FormField } from '@/types/formField'
-import type {
-  OpenAISettings,
-  GoogleSettings,
-  SystemSetting,
-  RootState,
-} from '../types/systemSettings'
+import type { RootState } from '../types/systemSettings'
+import AppButton from '@/components/AppButton.vue'
 
 export default defineComponent({
   name: 'SystemSettingsView',
 
   components: {
     DynamicForm,
+    AppButton,
   },
 
   setup() {

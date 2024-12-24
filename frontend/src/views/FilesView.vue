@@ -17,19 +17,32 @@
           @update:model-value="updateDateFilter"
           placeholder="Modified After"
         />
-        <button class="apply-filters-btn" @click="applyFilters">
-          Apply Filters
-        </button>
+
+        <AppButton
+          classes="apply-filters-btn"
+          @click="applyFilters"
+          text="Apply Filters"
+        ></AppButton>
       </div>
 
       <div class="active-filters" v-if="hasActiveFilters">
         <div class="filter-tag" v-if="filters.query">
           Search: {{ filters.query }}
-          <button @click="clearTextFilter" class="clear-filter">×</button>
+
+          <AppButton
+            @click="clearTextFilter"
+            classes="clear-filter"
+            icon="close"
+          ></AppButton>
         </div>
         <div class="filter-tag" v-if="filters.modifiedAfter">
           Modified after: {{ formatDate(filters.modifiedAfter) }}
-          <button @click="clearDateFilter" class="clear-filter">×</button>
+
+          <AppButton
+            @click="clearDateFilter"
+            classes="clear-filter"
+            icon="close"
+          ></AppButton>
         </div>
       </div>
     </div>
@@ -40,7 +53,11 @@
         <div class="error-icon">⚠️</div>
         <h2>Something went wrong</h2>
         <p>{{ error }}</p>
-        <button @click="retryFetch" class="retry-button">Try Again</button>
+        <AppButton
+          @click="retryFetch"
+          classes="retry-button"
+          text="Try Again"
+        ></AppButton>
       </div>
     </div>
 
@@ -87,10 +104,17 @@ import TextFilter from '@/components/filters/TextFilter.vue'
 import DateFilter from '@/components/filters/DateFilter.vue'
 import FilesTable from '../components/FilesTable/FilesTable.vue'
 import TablePagination from '../components/Table/TablePagination.vue'
+import AppButton from '../components/AppButton.vue'
 
 export default defineComponent({
   name: 'FilesView',
-  components: { TextFilter, DateFilter, FilesTable, TablePagination },
+  components: {
+    AppButton,
+    TextFilter,
+    DateFilter,
+    FilesTable,
+    TablePagination,
+  },
 
   setup() {
     const store = useStore()

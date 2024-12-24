@@ -8,35 +8,32 @@
 
     <div class="pagination-controls">
       <div class="page-selector">
-        <button
-          class="page-nav-btn"
+        <AppButton
+          classes="page-nav-btn"
           :disabled="pagination.currentPage === 1"
           @click="changePage(pagination.currentPage - 1)"
-        >
-          <ChevronLeftIcon class="nav-icon" />
-        </button>
+          icon="chevronLeft"
+        ></AppButton>
 
         <div class="page-numbers">
           <template v-for="pageNum in visiblePages" :key="pageNum">
-            <button
+            <AppButton
               v-if="pageNum !== '...'"
               class="page-number-btn"
-              :class="{ active: pageNum === pagination.currentPage }"
+              :classes="pageNum === pagination.currentPage ? 'active' : ''"
               @click="changePage(pageNum)"
-            >
-              {{ pageNum }}
-            </button>
+              :text="`${pageNum}`"
+            ></AppButton>
             <span v-else class="page-ellipsis">...</span>
           </template>
         </div>
 
-        <button
-          class="page-nav-btn"
+        <AppButton
+          classes="page-nav-btn"
           :disabled="pagination.currentPage === pagination.totalPages"
           @click="changePage(pagination.currentPage + 1)"
-        >
-          <ChevronRightIcon class="nav-icon" />
-        </button>
+          icon="chevronRight"
+        ></AppButton>
       </div>
 
       <div class="page-size-selector">
@@ -57,8 +54,10 @@
 <script setup>
 import { computed, ref, watch, defineProps, defineEmits } from 'vue'
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
+import AppButton from '../AppButton.vue'
 
 const props = defineProps({
+  components: { AppButton },
   pagination: {
     type: Object,
     required: true,

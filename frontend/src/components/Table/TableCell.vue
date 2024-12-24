@@ -2,16 +2,14 @@
   <td :style="{ width }">
     <template v-if="column.key === 'actions'">
       <div class="actions">
-        <button
+        <AppButton
           v-for="action in defaultActions"
           :key="action.type"
           class="btn"
-          :class="`btn-${action.type}`"
+          :classes="`btn-${action.type}`"
           @click="$emit(action.type as any)"
-          :title="action.title"
-        >
-          {{ action.icon }}
-        </button>
+          :icon="action.icon"
+        ></AppButton>
       </div>
     </template>
     <template v-else>
@@ -25,9 +23,11 @@
 <script lang="ts">
 import { defineComponent, PropType, computed } from 'vue'
 import { Column, Row } from '@/types/generic'
+import AppButton from '@/components/AppButton.vue'
 
 export default defineComponent({
   name: 'TableCell',
+  components: { AppButton },
   props: {
     column: {
       type: Object as PropType<Column>,
@@ -44,9 +44,9 @@ export default defineComponent({
   },
   setup(props) {
     const defaultActions = [
-      { type: 'copy', icon: '📋', title: 'Copy' },
-      { type: 'edit', icon: '✏️', title: 'Edit' },
-      { type: 'delete', icon: '🗑️', title: 'Delete' },
+      { type: 'copy', icon: 'copy', title: 'Copy' },
+      { type: 'edit', icon: 'edit', title: 'Edit' },
+      { type: 'delete', icon: 'delete', title: 'Delete' },
     ]
 
     const formatValue = computed(() => {

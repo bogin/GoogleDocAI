@@ -32,6 +32,8 @@ const iconMap = {
   edit: '✏️',
   copy: '📋',
   search: '🔍',
+  chevronLeft: '◀️',
+  chevronRight: '▶️',
 }
 </script>
 

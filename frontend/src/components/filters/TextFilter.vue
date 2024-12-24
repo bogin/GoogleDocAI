@@ -1,21 +1,9 @@
 <template>
   <div class="search-container">
     <div class="search-box" :class="{ 'is-focused': isFocused }">
-      <button class="search-icon" @click="handleSearch">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          viewBox="0 0 24 24"
-          width="20"
-          height="20"
-        >
-          <path
-            fill="none"
-            stroke="currentColor"
-            stroke-width="2"
-            d="M15.5 14h-.79l-.28-.27a6.5 6.5 0 1 0-.7.7l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0A4.5 4.5 0 1 1 14 9.5 4.5 4.5 0 0 1 9.5 14z"
-          />
-        </svg>
-      </button>
+      <AppButton @click="handleSearch" classes="search-icon" icon="search">
+      </AppButton>
+
       <input
         type="text"
         :value="modelValue"
@@ -26,19 +14,19 @@
         placeholder="Search files..."
         class="search-input"
       />
-      <button v-if="modelValue" @click="clearSearch" class="clear-button">
-        ×
-      </button>
+      <AppButton @click="clearSearch" classes="clear-button" icon="close">
+      </AppButton>
     </div>
   </div>
 </template>
 
 <script lang="ts">
 import { defineComponent, ref } from 'vue'
+import AppButton from '../AppButton.vue'
 
 export default defineComponent({
   name: 'TextSearchFilter',
-
+  components: { AppButton },
   props: {
     modelValue: {
       type: String,

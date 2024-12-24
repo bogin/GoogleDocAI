@@ -18,11 +18,10 @@
       <div class="dropdown-header">
         <h3>Visible Columns</h3>
         <AppButton
-          class="reset-button"
+          classes="reset-button"
           @click="resetToDefault"
           text="Reset"
         ></AppButton>
-        <button class="reset-button" @click="resetToDefault">Reset</button>
       </div>
       <div class="columns-list">
         <label
@@ -47,8 +46,8 @@
 import { defineComponent, ref, onMounted, onUnmounted, PropType } from 'vue'
 import { defaultColumns } from '../FilesTable/configuration'
 import { Column } from '@/types/generic'
-import AppIcon from '../AppIcon.vue'
 import AppButton from '../AppButton.vue'
+import AppIcon from '../AppIcon.vue'
 
 export default defineComponent({
   name: 'ColumnVisibilityToggle',
@@ -89,6 +88,7 @@ export default defineComponent({
         !toggleButton.value?.contains(event.target as Node) &&
         !dropdown.value?.contains(event.target as Node)
       ) {
+        console.log('????', toggleButton.value)
         showDropdown.value = false
       }
     }
@@ -115,6 +115,11 @@ export default defineComponent({
       window.removeEventListener('resize', updateDropdownPosition)
     })
 
+    const showDropdownModel = () => {
+      showDropdown.value = !showDropdown.value
+      console.log('!!!!!!!!!!!!!!!!!!', showDropdown.value)
+    }
+
     return {
       showDropdown,
       toggleButton,
@@ -122,6 +127,7 @@ export default defineComponent({
       dropdownStyle,
       toggleColumn,
       resetToDefault,
+      showDropdownModel,
     }
   },
 })
@@ -157,12 +163,13 @@ export default defineComponent({
 
 .dropdown-menu {
   position: fixed;
-  min-width: 200px;
+  min-width: 300px;
   background: white;
   border-radius: 8px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
     0 2px 4px -1px rgba(0, 0, 0, 0.06);
   z-index: 1000;
+  right: 84px;
 }
 
 .dropdown-header {

@@ -113,10 +113,10 @@ const actions = {
     commit('SET_ERROR', null)
 
     try {
-      console.log(`${payload}`)
+      console.log(`${payload}`, payload)
       const { data } = await axios.put<SystemSetting>(
         `/system-settings/${payload.key}`,
-        { value: payload.value }
+        payload.value
       )
       commit('UPDATE_SETTING', data)
       return data

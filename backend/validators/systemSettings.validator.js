@@ -1,7 +1,7 @@
 const { body, param } = require('express-validator');
 
 exports.validateSettingKey = [
-    body('key')
+    param('key')
         .trim()
         .notEmpty()
         .withMessage('Key is required')
@@ -11,7 +11,7 @@ exports.validateSettingKey = [
 ];
 
 exports.validateSettingValue = [
-    body('value')
+    body()
         .notEmpty()
         .withMessage('Value is required')
         .custom((value) => {

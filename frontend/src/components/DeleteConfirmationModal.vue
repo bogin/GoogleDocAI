@@ -4,10 +4,17 @@
       <h3>Confirm Delete</h3>
       <p>Are you sure you want to delete this file?</p>
       <div class="modal-actions">
-        <button @click="$emit('confirm')" class="btn btn-danger">Delete</button>
-        <button @click="$emit('cancel')" class="btn btn-secondary">
-          Cancel
-        </button>
+        <AppButton
+          @click="$emit('confirm')"
+          classes="btn btn-danger"
+          text="Delete"
+        ></AppButton>
+
+        <AppButton
+          @click="$emit('cancel')"
+          classes="btn btn-secondary"
+          text="Cancel"
+        ></AppButton>
       </div>
     </div>
   </div>
@@ -15,8 +22,10 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import AppButton from './AppButton.vue'
 
 export default defineComponent({
+  components: { AppButton },
   name: 'DeleteConfirmationModal',
   props: {
     show: {

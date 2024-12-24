@@ -10,7 +10,7 @@
       <AppButton
         v-if="startDate"
         @click="clearDate"
-        class="clear-date-btn"
+        classes="clear-date-btn"
         text="Clear date"
         icon="close"
       ></AppButton>
