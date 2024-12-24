@@ -113,6 +113,7 @@ export default defineComponent({
     })
 
     const handleSearch = async (query: string): Promise<void> => {
+      console.log('!!!')
       if (!query.trim()) {
         store.dispatch('analytics/clearResults')
         return
@@ -243,7 +244,7 @@ export default defineComponent({
       margin-top: 0.5rem;
 
       &:focus {
-        outline: none;
+        outline: none !important;
         border-color: #1a73e8;
       }
     }

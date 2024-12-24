@@ -220,7 +220,7 @@ class FilesOpenAIService extends BaseOpenAIService {
       const cacheKey = `${query}-${page}-${size}`;
       const cachedResult = await cacheService.get(cacheKey);
       if (cachedResult) {
-        if (aiQueryConfigRaw.includes("Error:")) {
+        if (cachedResult.includes("Error:")) {
           throw new Error("Error: Query is not searchable.");
         }
         return cachedResult;

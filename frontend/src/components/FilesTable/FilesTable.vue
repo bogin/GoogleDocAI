@@ -225,12 +225,12 @@ export default defineComponent({
 
 .table-container {
   position: relative;
-  height: 100%;
-  min-height: 400px;
-  max-height: calc(86vh - 300px);
+  min-height: 30vh;
+  max-height: 54vh;
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: auto;
 }
 
 .table-scroll-container {

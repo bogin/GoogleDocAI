@@ -24,10 +24,18 @@
               :max="field.max"
             />
           </template>
-          <!-- Select -->
+
           <template v-if="field.type === 'select'">
-            <label :for="field.name">{{ field.label }}</label>
-            <select
+            <AppSelect
+              v-model="formData[field.name]"
+              :name="field.name"
+              :label="field.label"
+              :required="field.required"
+              :placeholder="`Select ${field.label}`"
+              :options="field.options!"
+            />
+
+            <!-- <select
               :id="field.name"
               v-model="formData[field.name]"
               :required="field.required"
@@ -40,7 +48,7 @@
               >
                 {{ option.label }}
               </option>
-            </select>
+            </select> -->
           </template>
 
           <template v-if="field.type === 'checkbox'">
@@ -52,7 +60,6 @@
             />
           </template>
 
-          <!-- Error message -->
           <span class="error-message" v-if="errors[field.name]">
             {{ errors[field.name] }}
           </span>
@@ -83,10 +90,11 @@ import { FormField, FormErrors } from '@/types/formField'
 import { defineComponent, ref, computed, PropType, watch } from 'vue'
 import AppButton from './AppButton.vue'
 import AppInput from './AppInput.vue'
+import AppSelect from './AppSelect.vue'
 
 export default defineComponent({
   name: 'DynamicForm',
-  components: { AppButton, AppInput },
+  components: { AppButton, AppInput, AppSelect },
   props: {
     show: {
       type: Boolean,
@@ -105,13 +113,6 @@ export default defineComponent({
       default: () => ({}),
     },
   },
-
-  emits: {
-    update: (data: Record<string, any>) => true,
-    create: (data: Record<string, any>) => true,
-    close: () => true,
-  },
-
   setup(props, { emit }) {
     const formData = ref<Record<string, any>>(props.initialData || {})
     const errors = ref<FormErrors>({})
@@ -269,7 +270,7 @@ export default defineComponent({
       transition: all 0.2s;
 
       &:focus {
-        outline: none;
+        outline: none !important;
         border-color: #4299e1;
         box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
       }

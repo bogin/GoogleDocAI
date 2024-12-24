@@ -1,51 +1,54 @@
 <template>
-  <div class="pagination-container">
-    <div class="pagination-summary">
-      <span class="pagination-text">
-        {{ startItem }} - {{ endItem }} of {{ pagination.totalItems }} files
-      </span>
+  <div class="pagination-section">
+    <div class="pagination-info">
+      <span
+        >{{ startItem }} - {{ endItem }} of
+        {{ pagination.totalItems }} files</span
+      >
     </div>
 
     <div class="pagination-controls">
-      <div class="page-selector">
+      <div class="page-navigation">
         <AppButton
-          classes="page-nav-btn"
+          classes="nav-button"
           :disabled="pagination.currentPage === 1"
           @click="changePage(pagination.currentPage - 1)"
           icon="chevronLeft"
-        ></AppButton>
+        />
 
         <div class="page-numbers">
           <template v-for="pageNum in visiblePages" :key="pageNum">
             <AppButton
               v-if="pageNum !== '...'"
-              class="page-number-btn"
-              :classes="pageNum === pagination.currentPage ? 'active' : ''"
+              :classes="`${
+                pageNum === pagination.currentPage ? 'active' : ''
+              } page-button`"
               @click="changePage(pageNum)"
               :text="`${pageNum}`"
-            ></AppButton>
-            <span v-else class="page-ellipsis">...</span>
+            />
+            <span v-else class="page-ellipsis">···</span>
           </template>
         </div>
 
         <AppButton
-          classes="page-nav-btn"
+          classes="nav-button"
           :disabled="pagination.currentPage === pagination.totalPages"
           @click="changePage(pagination.currentPage + 1)"
           icon="chevronRight"
-        ></AppButton>
+        />
       </div>
 
-      <div class="page-size-selector">
-        <select
+      <div class="page-size">
+        <AppSelect
           v-model="localPageSize"
+          name="pageSize"
+          :options="[
+            { value: '10', label: '10 per page' },
+            { value: '25', label: '25 per page' },
+            { value: '50', label: '50 per page' },
+          ]"
           @change="handlePageSizeChange"
-          class="page-size-dropdown"
-        >
-          <option value="10">10 per page</option>
-          <option value="25">25 per page</option>
-          <option value="50">50 per page</option>
-        </select>
+        />
       </div>
     </div>
   </div>
@@ -53,11 +56,10 @@
 
 <script setup>
 import { computed, ref, watch, defineProps, defineEmits } from 'vue'
-import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-vue-next'
 import AppButton from '../AppButton.vue'
+import AppSelect from '../AppSelect.vue'
 
 const props = defineProps({
-  components: { AppButton },
   pagination: {
     type: Object,
     required: true,
@@ -126,7 +128,8 @@ const changePage = (page) => {
 }
 
 const handlePageSizeChange = () => {
-  emit('size-change', Number(localPageSize.value))
+  const newSize = parseInt(localPageSize.value, 10)
+  emit('size-change', newSize)
 }
 
 watch(
@@ -137,108 +140,142 @@ watch(
 )
 </script>
 
-<style scoped>
-.pagination-container {
+<style lang="scss" scoped>
+.pagination-section {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem;
-  background-color: #f9fafb;
-  border-radius: 0.75rem;
+  padding: 1.25rem;
+  background: white;
+  border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.pagination-summary {
-  font-size: 0.875rem;
-  color: #6b7280;
-}
-
-.pagination-controls {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.page-selector {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  background-color: white;
-  border-radius: 0.5rem;
   border: 1px solid #e5e7eb;
+  margin-top: 8px;
+
+  .pagination-info {
+    font-size: 0.875rem;
+    color: #64748b;
+    font-weight: 500;
+  }
+
+  .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+
+    .page-navigation {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.25rem;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+
+      .nav-button {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        color: #64748b;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        transition: all 0.2s ease;
+
+        &:hover:not(:disabled) {
+          background: #e2e8f0;
+          color: #1e293b;
+        }
+
+        &:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+        }
+      }
+
+      .page-numbers {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+
+        .page-button {
+          width: 36px;
+          height: 36px;
+          padding: 0;
+          font-size: 0.875rem;
+          font-weight: 500;
+          color: #64748b;
+          background: transparent;
+          border: none;
+          border-radius: 6px;
+          transition: all 0.2s ease;
+
+          &:hover:not(.active) {
+            background: #e2e8f0;
+            color: #1e293b;
+          }
+
+          &.active {
+            background: #2563eb;
+            color: white;
+          }
+        }
+
+        .page-ellipsis {
+          color: #94a3b8;
+          padding: 0 0.25rem;
+          user-select: none;
+        }
+      }
+    }
+
+    .page-size {
+      :deep(.input-wrapper) {
+        margin-bottom: 0;
+        min-width: 140px;
+
+        .input-field {
+          height: 42px;
+          background: #f8fafc;
+          border-color: #e2e8f0;
+          font-size: 0.875rem;
+          color: #64748b;
+
+          &:hover {
+            border-color: #cbd5e1;
+            background: white;
+          }
+
+          &:focus {
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+          }
+        }
+      }
+    }
+  }
 }
 
-.page-nav-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
-  background: none;
-  border: none;
-  color: #6b7280;
-  cursor: pointer;
-  transition: background-color 0.2s;
-}
+@media (max-width: 768px) {
+  .pagination-section {
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
 
-.page-nav-btn:hover:not(:disabled) {
-  background-color: #f3f4f6;
-}
+    .pagination-controls {
+      width: 100%;
+      flex-direction: column;
+      gap: 1rem;
 
-.page-nav-btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
+      .page-navigation {
+        width: 100%;
+        justify-content: center;
+      }
 
-.nav-icon {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.page-numbers {
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.page-number-btn {
-  width: 2.5rem;
-  height: 2.5rem;
-  background: none;
-  border: none;
-  border-radius: 0.25rem;
-  font-size: 0.875rem;
-  color: #6b7280;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.page-number-btn:hover:not(.active) {
-  background-color: #f3f4f6;
-}
-
-.page-number-btn.active {
-  background-color: #3b82f6;
-  color: white;
-}
-
-.page-ellipsis {
-  color: #6b7280;
-  margin: 0 0.5rem;
-}
-
-.page-size-dropdown {
-  padding: 0.5rem;
-  border: 1px solid #e5e7eb;
-  border-radius: 0.5rem;
-  background-color: white;
-  color: #374151;
-  font-size: 0.875rem;
-}
-
-.page-size-dropdown:focus {
-  outline: none;
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      .page-size {
+        width: 100%;
+      }
+    }
+  }
 }
 </style>

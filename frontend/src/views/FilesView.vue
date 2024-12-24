@@ -1,6 +1,5 @@
 <template>
   <div class="files-view">
-    <!-- Header Section -->
     <div class="header">
       <div class="title-section">
         <h1>Files Management</h1>
@@ -8,61 +7,18 @@
       </div>
     </div>
 
-    <!-- Filters Section -->
-    <div class="filters-section">
-      <div class="filters-container">
-        <TextFilter v-model="filters.query" @search="applyFilters" />
-        <DateFilter
-          :model-value="filters.modifiedTime"
-          @update:model-value="updateDateFilter"
-          placeholder="Modified After"
-        />
+    <FiltersContainer v-model="filters" @apply="applyFilters" />
 
-        <AppButton
-          classes="apply-filters-btn"
-          @click="applyFilters"
-          text="Apply Filters"
-        ></AppButton>
-      </div>
-
-      <div class="active-filters" v-if="hasActiveFilters">
-        <div class="filter-tag" v-if="filters.query">
-          Search: {{ filters.query }}
-
-          <AppButton
-            @click="clearTextFilter"
-            classes="clear-filter"
-            icon="close"
-          ></AppButton>
-        </div>
-        <div class="filter-tag" v-if="filters.modifiedTime">
-          Modified after: {{ formatDate(filters.modifiedTime) }}
-
-          <AppButton
-            @click="clearDateFilter"
-            classes="clear-filter"
-            icon="close"
-          ></AppButton>
-        </div>
-      </div>
-    </div>
-
-    <!-- Error State -->
     <div v-if="error" class="error-container">
       <div class="error-content">
         <div class="error-icon">⚠️</div>
         <h2>Something went wrong</h2>
         <p>{{ error }}</p>
-        <AppButton
-          @click="retryFetch"
-          classes="retry-button"
-          text="Try Again"
-        ></AppButton>
+        <AppButton variant="primary" @click="retryFetch">Try Again</AppButton>
       </div>
     </div>
 
-    <!-- Files Table Section -->
-    <div v-else class="table-container" :class="{ loading }">
+    <div v-else class="files-containerr" :class="{ loading }">
       <FilesTable
         :files="files"
         :loading="loading"
@@ -70,13 +26,11 @@
         @update="handleEdit"
       />
 
-      <!-- Loading Overlay -->
       <div v-if="loading" class="loading-overlay">
         <div class="spinner"></div>
         <span>Loading files...</span>
       </div>
 
-      <!-- Empty State -->
       <div v-if="!loading && files.length === 0" class="empty-state">
         <span class="icon">📁</span>
         <p>No files found</p>
@@ -86,7 +40,6 @@
       </div>
     </div>
 
-    <!-- Pagination Section -->
     <TablePagination
       v-if="!error"
       :pagination="pagination"
@@ -100,59 +53,33 @@
 <script lang="ts">
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
-import TextFilter from '@/components/filters/TextFilter.vue'
-import DateFilter from '@/components/filters/DateFilter.vue'
 import FilesTable from '../components/FilesTable/FilesTable.vue'
 import TablePagination from '../components/Table/TablePagination.vue'
 import AppButton from '../components/AppButton.vue'
+import FiltersContainer from '../components/filters/FiltersContainer.vue'
 
 export default defineComponent({
   name: 'FilesView',
   components: {
     AppButton,
-    TextFilter,
-    DateFilter,
     FilesTable,
     TablePagination,
+    FiltersContainer,
   },
 
   setup() {
     const store = useStore()
     const pageSize = ref(10)
     const currentPage = ref(1)
-    const filters = ref({
+    const filters = ref<{ query: string; modifiedTime?: string }>({
       query: '',
-      modifiedTime: null as string | null,
+      modifiedTime: undefined,
     })
 
     const files = computed(() => store.state.files.items)
     const loading = computed(() => store.state.files.loading)
     const error = computed(() => store.state.files.error)
     const pagination = computed(() => store.state.files.pagination)
-
-    const applyFilters = () => {
-      currentPage.value = 1
-      fetchFiles()
-    }
-
-    const updateTextFilter = (value: string) => {
-      filters.value.query = value
-    }
-
-    const updateDateFilter = (value: string | null) => {
-      filters.value.modifiedTime = value
-    }
-
-    const clearTextFilter = () => {
-      filters.value.query = ''
-      applyFilters()
-    }
-
-    const clearDateFilter = () => {
-      filters.value.modifiedTime = null
-      applyFilters()
-    }
-
     const hasActiveFilters = computed(() =>
       Boolean(filters.value.query || filters.value.modifiedTime)
     )
@@ -164,6 +91,11 @@ export default defineComponent({
         filters: filters.value,
         pagination: pagination.value,
       })
+    }
+
+    const applyFilters = () => {
+      currentPage.value = 1
+      fetchFiles()
     }
 
     const retryFetch = () => {
@@ -180,11 +112,8 @@ export default defineComponent({
 
     const handlePageSizeChange = (value: number) => {
       pageSize.value = value
+      pagination.value.pageSize = value
       fetchFiles()
-    }
-
-    const formatDate = (date: string | null) => {
-      return date ? new Date(date).toLocaleDateString() : ''
     }
 
     const handleDelete = async (fileId: string) => {
@@ -220,14 +149,8 @@ export default defineComponent({
       pagination,
       filters,
       pageSize,
-      currentPage,
       hasActiveFilters,
-      updateTextFilter,
-      updateDateFilter,
       handlePageSizeChange,
-      clearTextFilter,
-      clearDateFilter,
-      formatDate,
       fetchFiles,
       retryFetch,
       changePage,
@@ -244,7 +167,27 @@ export default defineComponent({
   margin: 0 auto;
   padding: 0 2rem;
   background: #f8f9fa;
-  min-height: calc(100vh - 64px);
+  min-height: calc(93vh - 64px);
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+
+    .title-section {
+      h1 {
+        font-size: 2rem;
+        color: #1a202c;
+        margin-bottom: 0.5rem;
+        font-weight: 600;
+      }
+
+      .subtitle {
+        color: #4a5568;
+        font-size: 1rem;
+      }
+    }
+  }
 
   .error-container {
     display: flex;
@@ -273,292 +216,69 @@ export default defineComponent({
         color: #4a5568;
         margin-bottom: 1.5rem;
       }
-
-      .retry-button {
-        padding: 0.75rem 1.5rem;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: background 0.2s ease;
-
-        &:hover {
-          background: #1d4ed8;
-        }
-      }
     }
   }
 
-  .header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2rem;
+  .files-containerr {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    position: relative;
+    min-height: 40vh;
+    max-height: 62vh;
+    overflow: hidden;
+    padding: 14px;
 
-    .title-section {
-      h1 {
-        font-size: 2rem;
-        color: #1a202c;
-        margin-bottom: 0.5rem;
-        font-weight: 600;
-      }
-
-      .subtitle {
-        color: #4a5568;
-        font-size: 1rem;
-      }
+    &.loading {
+      opacity: 0.7;
     }
 
-    .sync-btn {
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      gap: 0.5rem;
-      padding: 0.75rem 1.5rem;
-      font-size: 1rem;
-      font-weight: 500;
-      color: white;
-      background: #4299e1;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      transition: all 0.2s;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.9);
+      z-index: 10;
 
-      &:hover:not(:disabled) {
-        background: #3182ce;
-      }
-
-      &:disabled {
-        opacity: 0.7;
-        cursor: not-allowed;
-      }
-
-      &.loading .icon {
+      .spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid #e2e8f0;
+        border-top-color: #4299e1;
+        border-radius: 50%;
         animation: spin 1s linear infinite;
       }
     }
-  }
 
-  .filters-section {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-    margin-bottom: 1.5rem;
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #4a5568;
 
-    .filters-container {
-      display: grid;
-      grid-template-columns: minmax(300px, 1fr) 200px auto;
-      gap: 1rem;
-      padding: 1rem;
-      align-items: center;
-
-      :deep(.text-filter) {
-        .search-input {
-          width: 100%;
-          height: 42px;
-          padding: 0 1rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 0.9375rem;
-          background: #f8fafc;
-          transition: all 0.2s ease;
-
-          &:hover {
-            border-color: #cbd5e1;
-            background: white;
-          }
-
-          &:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            background: white;
-          }
-
-          &::placeholder {
-            color: #94a3b8;
-          }
-        }
+      .icon {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+        display: block;
       }
 
-      :deep(.date-filter) {
-        input {
-          width: 100%;
-          height: 42px;
-          padding: 0 1rem;
-          border: 1px solid #e2e8f0;
-          border-radius: 8px;
-          font-size: 0.9375rem;
-          color: #475569;
-          background: #f8fafc;
+      p {
+        font-size: 1.125rem;
+        margin: 0;
 
-          &:hover {
-            border-color: #cbd5e1;
-            background: white;
-          }
-
-          &:focus {
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-            background: white;
-          }
-        }
-      }
-
-      .apply-filters-btn {
-        height: 42px;
-        padding: 0 1.5rem;
-        background: #2563eb;
-        color: white;
-        border: none;
-        border-radius: 8px;
-        font-size: 0.9375rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-
-        &:hover {
-          background: #1d4ed8;
-          transform: translateY(-1px);
-        }
-
-        &:active {
-          transform: translateY(0);
-        }
-      }
-    }
-
-    .active-filters {
-      padding: 0.75rem 1rem;
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-      border-top: 1px solid #f1f5f9;
-
-      .filter-tag {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.25rem 0.75rem;
-        background: #f1f5f9;
-        color: #475569;
-        border-radius: 6px;
-        font-size: 0.8125rem;
-        font-weight: 500;
-
-        .clear-filter {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          padding: 0.25rem;
-          margin-left: 0.25rem;
-          border: none;
-          background: none;
-          color: #64748b;
-          cursor: pointer;
-          border-radius: 4px;
-          transition: all 0.15s ease;
-
-          &:hover {
-            background: #e2e8f0;
-            color: #dc2626;
-          }
+        &.subtitle {
+          font-size: 0.875rem;
+          color: #718096;
+          margin-top: 0.5rem;
         }
       }
     }
   }
-}
-
-@media (max-width: 768px) {
-  .filters-section {
-    padding: 1rem;
-
-    .filters-container {
-      flex-direction: column;
-      gap: 1rem;
-
-      :deep(.text-filter),
-      :deep(.date-filter) {
-        width: 100%;
-      }
-
-      .apply-filters-btn {
-        width: 100%;
-      }
-    }
-  }
-}
-
-.table-container {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  position: relative;
-  min-height: 40vh;
-  max-height: 80vh;
-  overflow: hidden;
-
-  &.loading {
-    opacity: 0.7;
-  }
-
-  .loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(255, 255, 255, 0.9);
-    z-index: 10;
-
-    .spinner {
-      width: 40px;
-      height: 40px;
-      border: 3px solid #e2e8f0;
-      border-top-color: #4299e1;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 4rem 2rem;
-    color: #4a5568;
-
-    .icon {
-      font-size: 3rem;
-      margin-bottom: 1rem;
-      display: block;
-    }
-
-    p {
-      font-size: 1.125rem;
-      margin: 0;
-
-      &.subtitle {
-        font-size: 0.875rem;
-        color: #718096;
-        margin-top: 0.5rem;
-      }
-    }
-  }
-}
-
-.pagination-section {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 1.5rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes spin {
@@ -581,18 +301,8 @@ export default defineComponent({
       gap: 1rem;
     }
 
-    .filters-section .filters-container {
-      flex-direction: column;
-    }
-
-    .pagination-section {
-      flex-direction: column;
-      gap: 1rem;
-      text-align: center;
-
-      .pagination-controls {
-        order: -1;
-      }
+    .files-containerr {
+      margin-top: 1rem;
     }
   }
 }

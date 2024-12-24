@@ -11,7 +11,7 @@ class FilesRepository {
         attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize']
     };
 
-    async findAll({ queryConfig = {} }) {
+    async findAll(queryConfig) {
         try {
             const { count, rows } = await File.findAndCountAll(queryConfig);
             return { count, rows };

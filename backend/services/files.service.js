@@ -14,7 +14,7 @@ class FilesService {
     const size = options.size ? parseInt(options.size) : PAGINATION_DEFAULTS.size;
 
     const queryConfig = await this.buildQueryConfig({ page, size, filters: options?.filters || {} });
-    const { count, rows } = await filesRepository.findAll(queryConfig);
+    const { count, rows } = await filesRepository.findAll({...queryConfig});
     
     const processedFiles = this.processFilePermissions(rows);
     return this.buildPaginatedResponse(processedFiles, count, page, size);

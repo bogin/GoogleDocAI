@@ -1,6 +1,5 @@
 <template>
   <div class="app">
-    <!-- Top Navigation Bar -->
     <nav class="navbar">
       <div class="nav-brand">
         <img
@@ -58,7 +57,6 @@
       </div>
     </nav>
 
-    <!-- Main Content Area -->
     <main class="main-content">
       <router-view v-slot="{ Component }">
         <transition name="fade" mode="out-in">
@@ -66,11 +64,6 @@
         </transition>
       </router-view>
     </main>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <p>© 2024 Unframe. All rights reserved.</p>
-    </footer>
   </div>
 </template>
 
@@ -90,8 +83,6 @@ body {
 
 .app {
   min-height: 100vh;
-  display: flex;
-  flex-direction: column;
 }
 
 .navbar {
@@ -202,15 +193,6 @@ body {
   padding: 2rem;
   margin: 0 auto;
   width: 100%;
-}
-
-.footer {
-  padding: 1.5rem;
-  text-align: center;
-  background: white;
-  color: #64748b;
-  font-size: 0.875rem;
-  border-top: 1px solid #e2e8f0;
 }
 
 .fade-enter-active,

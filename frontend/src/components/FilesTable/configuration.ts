@@ -51,7 +51,7 @@ const getAccessSummary = (permissions: Permission[] | undefined) => {
     return acc
   }, {} as Record<string, string[]>)
 
-  const parts = []
+  const parts: string[] = []
   if (types.anyone) parts.push('Anyone')
   if (types.domain) parts.push('Domain')
   if (types.group) parts.push('Groups')
@@ -66,14 +66,14 @@ export const defaultColumns: Column[] = [
     key: 'name',
     label: 'Name',
     visible: true,
-    sortable: true,
+
     width: '200px',
   },
   {
     key: 'owner',
     label: 'Owner',
     visible: true,
-    sortable: true,
+
     width: '150px',
     formatter: (_: any, file: File) =>
       getUsersByRole(file.permissions, 'owner'),
@@ -81,8 +81,8 @@ export const defaultColumns: Column[] = [
   {
     key: 'access',
     label: 'Sharing',
-    visible: true,
-    sortable: false,
+    visible: false,
+
     width: '200px',
     formatter: (_: any, file: File) => getAccessSummary(file.permissions),
   },
@@ -90,7 +90,7 @@ export const defaultColumns: Column[] = [
     key: 'anyoneAccess',
     label: 'Link Access',
     visible: true,
-    sortable: false,
+
     width: '150px',
     formatter: (_: any, file: File) => getAnyoneAccess(file.permissions),
   },
@@ -98,7 +98,7 @@ export const defaultColumns: Column[] = [
     key: 'commenters',
     label: 'Commenters',
     visible: true,
-    sortable: false,
+
     width: '200px',
     formatter: (_: any, file: File) =>
       getUsersByRole(file.permissions, 'commenter'),
@@ -107,15 +107,23 @@ export const defaultColumns: Column[] = [
     key: 'modifiedTime',
     label: 'Modified',
     visible: true,
-    sortable: true,
-    width: '160px',
+
+    width: '100px',
     formatter: formatDate,
+  },
+  {
+    key: 'mimeType',
+    label: 'Type',
+    visible: true,
+    width: '100px',
+    formatter: (value: string) =>
+      value.replaceAll('application/vnd.google-apps', '') || 'N/A',
   },
   {
     key: 'lastModifyingUser.displayName',
     label: 'Modified By',
     visible: true,
-    sortable: true,
+
     width: '150px',
     formatter: (value: string) => value || 'N/A',
   },
@@ -123,30 +131,23 @@ export const defaultColumns: Column[] = [
     key: 'size',
     label: 'Size',
     visible: true,
-    sortable: true,
-    width: '100px',
+
+    width: '80px',
     formatter: formatSize,
-  },
-  {
-    key: 'mimeType',
-    label: 'Type',
-    visible: false,
-    sortable: true,
-    width: '150px',
   },
   {
     key: 'shared',
     label: 'Shared',
     visible: false,
-    sortable: true,
+
     width: '100px',
     formatter: (value: boolean) => (value ? 'Yes' : 'No'),
   },
   {
     key: 'webViewLink',
     label: 'Link',
-    visible: true,
-    width: '100px',
+    visible: false,
+    width: '80px',
     formatter: (value: string) => value || 'No link',
   },
   {

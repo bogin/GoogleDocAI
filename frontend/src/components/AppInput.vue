@@ -189,7 +189,7 @@ const onBlur = (event) => {
 }
 
 .input-field:focus {
-  outline: none;
+  outline: none !important;
   border-color: #4299e1;
   box-shadow: 0 0 0 3px rgba(66, 153, 225, 0.1);
 }
