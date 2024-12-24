@@ -13,7 +13,7 @@
       <div class="filters-container">
         <TextFilter v-model="filters.query" @search="applyFilters" />
         <DateFilter
-          :model-value="filters.modifiedAfter"
+          :model-value="filters.modifiedTime"
           @update:model-value="updateDateFilter"
           placeholder="Modified After"
         />
@@ -35,8 +35,8 @@
             icon="close"
           ></AppButton>
         </div>
-        <div class="filter-tag" v-if="filters.modifiedAfter">
-          Modified after: {{ formatDate(filters.modifiedAfter) }}
+        <div class="filter-tag" v-if="filters.modifiedTime">
+          Modified after: {{ formatDate(filters.modifiedTime) }}
 
           <AppButton
             @click="clearDateFilter"
@@ -122,7 +122,7 @@ export default defineComponent({
     const currentPage = ref(1)
     const filters = ref({
       query: '',
-      modifiedAfter: null as string | null,
+      modifiedTime: null as string | null,
     })
 
     const files = computed(() => store.state.files.items)
@@ -140,7 +140,7 @@ export default defineComponent({
     }
 
     const updateDateFilter = (value: string | null) => {
-      filters.value.modifiedAfter = value
+      filters.value.modifiedTime = value
     }
 
     const clearTextFilter = () => {
@@ -149,12 +149,12 @@ export default defineComponent({
     }
 
     const clearDateFilter = () => {
-      filters.value.modifiedAfter = null
+      filters.value.modifiedTime = null
       applyFilters()
     }
 
     const hasActiveFilters = computed(() =>
-      Boolean(filters.value.query || filters.value.modifiedAfter)
+      Boolean(filters.value.query || filters.value.modifiedTime)
     )
 
     const fetchFiles = () => {

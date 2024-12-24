@@ -226,8 +226,8 @@ class GoogleService extends BaseService {
         try {
             let queryString = '';
 
-            if (filters?.modifiedAfter) {
-                queryString += `modifiedTime > '${new Date(filters.modifiedAfter).toISOString()}'`;
+            if (filters?.modifiedTime) {
+                queryString += `modifiedTime > '${new Date(filters.modifiedTime).toISOString()}'`;
             }
 
             if (query) {

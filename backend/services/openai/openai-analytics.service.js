@@ -292,7 +292,7 @@ params: {
   attributes: [
     [
       Sequelize.fn('DATE', Sequelize.col('modified_time')), // Use the actual database column name
-      'modifiedDate'
+      'modifiedTime'
     ],
     [
       Sequelize.fn('COUNT', Sequelize.col('id')),

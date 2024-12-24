@@ -9,7 +9,7 @@ interface FetchFilesPayload {
   page?: number
   size?: number
   filters?: {
-    modifiedAfter?: string
+    modifiedTime?: string
     query?: string
     [key: string]: unknown
   }

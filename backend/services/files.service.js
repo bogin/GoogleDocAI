@@ -14,12 +14,8 @@ class FilesService {
     const size = options.size ? parseInt(options.size) : PAGINATION_DEFAULTS.size;
 
     const queryConfig = await this.buildQueryConfig({ page, size, filters: options?.filters || {} });
-    const { count, rows } = await filesRepository.findAll({
-      page,
-      size,
-      queryConfig,
-    });
-
+    const { count, rows } = await filesRepository.findAll(queryConfig);
+    
     const processedFiles = this.processFilePermissions(rows);
     return this.buildPaginatedResponse(processedFiles, count, page, size);
   }
@@ -76,10 +72,14 @@ class FilesService {
   async buildQueryConfig({ page, size, filters }) {
     const queryConfig = this.buildBaseQueryConfig(page, size);
 
-    if (filters.modifiedAfter) {
-      queryConfig.where.modifiedTime = {
-        [Op.gte]: new Date(filters.modifiedAfter),
-      };
+    if (filters.modifiedTime) {
+      try {
+        queryConfig.where.modifiedTime = {
+          [Op.gte]: filters.modifiedTime
+        };
+      } catch (error) {
+        console.error('Invalid date format:', error);
+      }
     }
 
     if (filters?.query) {
