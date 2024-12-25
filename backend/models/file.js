@@ -3,12 +3,8 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
     class File extends Model {
         static associate(models) {
-            File.belongsTo(models.User, {
-                foreignKey: 'userId',
-                as: 'user',
-            });
             File.hasMany(models.FileOwner, {
-                foreignKey: 'fileId',
+                foreignKey: 'file_id',
                 as: 'fileOwners',
             });
         }
@@ -17,13 +13,13 @@ module.exports = (sequelize) => {
         async safeDelete(userId) {
             await sequelize.models.FileOwner.destroy({
                 where: {
-                    fileId: this.id,
-                    userId: userId
+                    file_id: this.id,  // Changed from fileId to match DB column
+                    user_id: userId    // Changed from userId to match DB column
                 }
             });
 
             const remainingOwners = await sequelize.models.FileOwner.count({
-                where: { fileId: this.id }
+                where: { file_id: this.id }  // Changed from fileId to match DB column
             });
 
             if (remainingOwners === 0) {
@@ -79,15 +75,6 @@ module.exports = (sequelize) => {
             type: DataTypes.STRING,
             allowNull: true
         },
-        userId: {
-            type: DataTypes.INTEGER,
-            allowNull: true,
-            field: 'user_id',
-            references: {
-                model: 'users',
-                key: 'id'
-            }
-        },
         lastModifyingUser: {
             type: DataTypes.JSONB,
             allowNull: true
@@ -140,9 +127,6 @@ module.exports = (sequelize) => {
             {
                 fields: ['trashed']
             },
-            {
-                fields: ['user_id']
-            }
         ]
     });
 

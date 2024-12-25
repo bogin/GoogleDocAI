@@ -19,7 +19,7 @@ class FilesRepository {
         }
     }
 
-    async findOne({ queryConfig }) {
+    async findOne(queryConfig) {
         try {
             const res = await File.findOne(queryConfig);
             return res;
@@ -114,7 +114,7 @@ class FilesRepository {
         for (const user of users) {
             const hasRemainingFiles = await fileOwnerRepository.userHasFiles(user.id, transaction);
             if (!hasRemainingFiles) {
-                await user.destroy({transaction});
+                await user.destroy({ transaction });
             }
         }
     }

@@ -47,19 +47,9 @@ module.exports = {
     await queryInterface.addIndex('users', ['email']);
     await queryInterface.addIndex('users', ['permission_id']);
 
-    await queryInterface.addColumn('files', 'user_id', {
-      type: Sequelize.INTEGER,
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'SET NULL'
-    });
   },
 
   down: async (queryInterface, Sequelize) => {
-    await queryInterface.removeColumn('files', 'user_id');
     await queryInterface.dropTable('users');
   }
 };

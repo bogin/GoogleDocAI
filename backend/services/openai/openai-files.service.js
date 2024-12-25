@@ -13,58 +13,57 @@ class FilesOpenAIService extends BaseOpenAIService {
 
   **Schemas:**
   - File: (tableName: 'files')
-    - id: character varying(255) (primary key)
-    - name: text
-    - mime_type: character varying(255)
-    - icon_link: character varying(255)
-    - web_view_link: character varying(255)
-    - size: character varying(255)
-    - shared: boolean (default: false)
-    - trashed: boolean (default: false)
-    - created_time: timestamp with time zone
-    - modified_time: timestamp with time zone
-    - version: character varying(255)
-    - last_modifying_user: jsonb
-    - permissions: jsonb
-    - capabilities: jsonb
-    - sync_status: character varying(255) (default: 'pending')
-    - last_sync_attempt: timestamp with time zone
-    - error_log: jsonb
-    - metadata: jsonb
-    - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
-    - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
-    - deleted_at: timestamp with time zone
-
-    Indexes:
-    - files_mime_type (mime_type)
-    - files_modified_time (modified_time)
-    - files_sync_status (sync_status)
-    - files_trashed (trashed)
+      - id: character varying(255) (primary key, NOT NULL)
+      - name: text (NOT NULL)
+      - mime_type: character varying(255) (nullable)
+      - icon_link: character varying(255) (nullable)
+      - web_view_link: character varying(255) (nullable)
+      - size: character varying(255) (nullable)
+      - shared: boolean (default: false, nullable)
+      - trashed: boolean (default: false, nullable)
+      - created_time: timestamp with time zone (nullable)
+      - modified_time: timestamp with time zone (nullable)
+      - version: character varying(255) (nullable)
+      - last_modifying_user: jsonb (nullable)
+      - permissions: jsonb (nullable)
+      - capabilities: jsonb (nullable)
+      - sync_status: character varying(255) (default: 'pending', nullable)
+      - last_sync_attempt: timestamp with time zone (nullable)
+      - error_log: jsonb (nullable)
+      - metadata: jsonb (nullable)
+      - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+      - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+      - deleted_at: timestamp with time zone (nullable)
+      Indexes:
+      - files_mime_type (mime_type)
+      - files_modified_time (modified_time)
+      - files_sync_status (sync_status)
+      - files_trashed (trashed)
 
   - User: (tableName: 'users')
-    - id: integer (primary key, auto-increment)
-    - permission_id: character varying(255) (unique)
-    - email: character varying(255) (unique)
-    - display_name: character varying(255)
-    - photo_link: character varying(255)
-    - total_files: integer (default: 0)
-    - total_size: bigint (default: 0)
-    - created_at: timestamp with time zone
-    - updated_at: timestamp with time zone
-    Indexes:
-    - users_email (email)
-    - users_permission_id (permission_id)
+      - id: integer (primary key, auto-increment)
+      - permission_id: character varying(255) (unique, NOT NULL)
+      - email: character varying(255) (unique, NOT NULL)
+      - display_name: character varying(255) (nullable)
+      - photo_link: character varying(255) (nullable)
+      - total_files: integer (default: 0)
+      - total_size: bigint (default: 0)
+      - created_at: timestamp with time zone (NOT NULL)
+      - updated_at: timestamp with time zone (NOT NULL)
+      Indexes:
+      - users_email (email)
+      - users_permission_id (permission_id)
 
   - FileOwner: (tableName: 'file_owners')
-    - id: integer (primary key, auto-increment)
-    - file_id: character varying(255) (foreign key to files.id, ON UPDATE CASCADE, ON DELETE CASCADE)
-    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE CASCADE)
-    - permission_role: character varying(255) (default: 'reader')
-    - created_at: timestamp with time zone
-    - updated_at: timestamp with time zone
-    Indexes:
-    - file_owner_unique (unique index on file_id, user_id)
-  
+      - id: integer (primary key, auto-increment, NOT NULL)
+      - file_id: character varying(255) (foreign key to files.id, ON UPDATE CASCADE, ON DELETE CASCADE, NOT NULL)
+      - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE CASCADE, NOT NULL)
+      - permission_role: character varying(255) (default: 'reader', NOT NULL)
+      - created_at: timestamp with time zone (NOT NULL)
+      - updated_at: timestamp with time zone (NOT NULL)
+      Indexes:
+      - file_owner_unique (unique index on file_id, user_id)
+    
   **Rules:**
   1. JSONB Operation Rules:
     - Use ->> for text extraction (e.g., last_modifying_user->>'emailAddress')

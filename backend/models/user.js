@@ -3,19 +3,39 @@ const { Model, DataTypes } = require('sequelize');
 module.exports = (sequelize) => {
     class User extends Model {
         static associate(models) {
-            User.hasMany(models.File, {
+            User.hasMany(models.FileOwner, {
                 foreignKey: 'user_id',
-                as: 'files'
+                as: 'fileOwners'
             });
         }
 
         async updateStats() {
-            const files = await this.getFiles();
-            this.totalFiles = files.length;
-            this.totalSize = files.reduce((sum, file) => {
-                const size = parseInt(file.size, 10);
-                return sum + (isNaN(size) ? 0 : size);
-            }, 0);
+            const { sequelize } = this.constructor;
+
+            const stats = await sequelize.models.FileOwner.findAll({
+                attributes: [
+                    [sequelize.fn('COUNT', sequelize.col('File.id')), 'total_files'],
+                    [sequelize.fn('SUM',
+                        sequelize.cast(sequelize.col('File.size'), 'BIGINT')), 'total_size']
+                ],
+                include: [{
+                    model: sequelize.models.File,
+                    attributes: [],
+                    required: true,
+                    where: {
+                        deleted_at: null
+                    }
+                }],
+                where: {
+                    user_id: this.id
+                },
+                group: ['FileOwner.user_id'],
+                raw: true
+            });
+
+            this.totalFiles = stats[0]?.total_files || 0;
+            this.totalSize = parseInt(stats[0]?.total_size || 0, 10);
+
             await this.save();
         }
     }

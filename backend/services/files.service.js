@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const filesRepository = require('../repo/files.repository');
 const openaiService = require('./openai/openai-files.service');
 const { sequelize } = require('../models');
+const { uniqBy } = require('lodash');
 
 const PAGINATION_DEFAULTS = {
   page: 1,
@@ -17,7 +18,7 @@ class FilesService {
 
     if (options?.filters?.modifiedTime) {
       queryConfig.where.modifiedTime = {
-        [Op.gte]: options.filters.modifiedTime
+        [Op.gte]: new Date(options.filters.modifiedTime).toISOString()
       };
     }
 
@@ -26,10 +27,10 @@ class FilesService {
       const string = await this.getQueryStringWithAI(options.filters.query, page, size, queryConfig);
 
       const [results, metadata] = await sequelize.query(string);
-      rows = results;
+      rows = uniqBy(results, 'id');
       count = metadata.rowCount
     } else {
-      const results = await filesRepository.findAll({ ...queryConfig });
+      const results = await filesRepository.findAll(queryConfig);
       rows = results.rows;
       count = results.count;
     }
@@ -62,7 +63,7 @@ class FilesService {
 
     return convertToCamelCase(file);
   }
-  
+
   processFilePermissions(files) {
     return files.map(file => {
       const fileData = !!file?.toJSON ? file.toJSON() : this.getInCamalCase(file);
@@ -114,7 +115,9 @@ class FilesService {
 
   buildBaseQueryConfig(page, size) {
     return {
-      where: {},
+      where: {
+        deletedAt: null
+      },
       limit: size,
       offset: (page - 1) * size,
       order: [['modifiedTime', 'DESC']]
