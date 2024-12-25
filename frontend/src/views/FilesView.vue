@@ -17,12 +17,16 @@
       </div>
     </div>
 
-    <div v-else class="files-containerr" :class="{ loading }">
+    <div v-else class="files-container" :class="{ loading }">
       <FilesTable
         :files="files"
         :loading="loading"
+        :pagination="pagination"
+        :page-size="pageSize"
         @delete="handleDelete"
         @update="handleEdit"
+        @page-change="changePage"
+        @size-change="handlePageSizeChange"
       />
 
       <div v-if="loading" class="loading-overlay">
@@ -38,14 +42,6 @@
         </p>
       </div>
     </div>
-
-    <TablePagination
-      v-if="!error"
-      :pagination="pagination"
-      :page-size="pageSize"
-      @page-change="changePage"
-      @size-change="handlePageSizeChange"
-    />
   </div>
 </template>
 
@@ -53,7 +49,6 @@
 import { defineComponent, ref, computed, onMounted } from 'vue'
 import { useStore } from 'vuex'
 import FilesTable from '../components/FilesTable/FilesTable.vue'
-import TablePagination from '../components/Table/TablePagination.vue'
 import AppButton from '../components/AppButton.vue'
 import FiltersContainer from '../components/filters/FiltersContainer.vue'
 
@@ -62,7 +57,6 @@ export default defineComponent({
   components: {
     AppButton,
     FilesTable,
-    TablePagination,
     FiltersContainer,
   },
 
@@ -218,14 +212,12 @@ export default defineComponent({
     }
   }
 
-  .files-containerr {
+  .files-container {
     background: white;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
     position: relative;
     min-height: 40vh;
-    max-height: 62vh;
-    overflow: hidden;
     padding: 14px;
 
     &.loading {
@@ -300,7 +292,7 @@ export default defineComponent({
       gap: 1rem;
     }
 
-    .files-containerr {
+    .files-container {
       margin-top: 1rem;
     }
   }

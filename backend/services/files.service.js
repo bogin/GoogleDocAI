@@ -70,7 +70,6 @@ class FilesService {
       const permissions = file.permissions || [];
 
       fileData.owners = this.extractOwners(permissions);
-      fileData.commenters = this.extractCommenters(permissions);
       fileData.publicAccess = this.extractPublicAccess(permissions);
 
       return fileData;
@@ -81,16 +80,6 @@ class FilesService {
     return permissions
       .filter(p => p.role === 'owner' && p.type === 'user')
       .map(p => ({
-        email: p.emailAddress,
-        displayName: p.displayName
-      }));
-  }
-
-  extractCommenters(permissions) {
-    return permissions
-      .filter(p => p.role === 'commenter')
-      .map(p => ({
-        type: p.type,
         email: p.emailAddress,
         displayName: p.displayName
       }));

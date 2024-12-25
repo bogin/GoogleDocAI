@@ -95,15 +95,6 @@ export const defaultColumns: Column[] = [
     formatter: (_: any, file: File) => getAnyoneAccess(file.permissions),
   },
   {
-    key: 'commenters',
-    label: 'Commenters',
-    visible: true,
-
-    width: '200px',
-    formatter: (_: any, file: File) =>
-      getUsersByRole(file.permissions, 'commenter'),
-  },
-  {
     key: 'modifiedTime',
     label: 'Modified',
     visible: true,

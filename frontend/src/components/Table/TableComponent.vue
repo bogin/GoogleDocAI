@@ -11,6 +11,12 @@
         @action="$emit('action', $event)"
       />
     </table>
+    <TablePagination
+      :pagination="pagination"
+      :page-size="pageSize"
+      @page-change="handlePageChange"
+      @size-change="handleSizeChange"
+    />
   </div>
 </template>
 
@@ -19,12 +25,21 @@ import { defineComponent, PropType } from 'vue'
 import { Column, Row } from '@/types/generic'
 import TableHeader from './TableHeader.vue'
 import TableBody from './TableBody.vue'
+import TablePagination from './TablePagination.vue'
+
+interface Pagination {
+  currentPage: number
+  totalPages: number
+  totalItems: number
+  pageSize: number
+}
 
 export default defineComponent({
   name: 'DataTable',
   components: {
     TableHeader,
     TableBody,
+    TablePagination,
   },
   props: {
     rows: {
@@ -35,8 +50,30 @@ export default defineComponent({
       type: Array as PropType<Column[]>,
       required: true,
     },
+    pagination: {
+      type: Object as PropType<Pagination>,
+      required: true,
+    },
+    pageSize: {
+      type: Number,
+      required: true,
+    },
   },
-  emits: ['edit', 'delete', 'action', 'copy'],
+  emits: ['edit', 'delete', 'action', 'copy', 'page-change', 'size-change'],
+  setup(props, { emit }) {
+    const handlePageChange = (page: number) => {
+      emit('page-change', page)
+    }
+
+    const handleSizeChange = (size: number) => {
+      emit('size-change', size)
+    }
+
+    return {
+      handlePageChange,
+      handleSizeChange,
+    }
+  },
 })
 </script>
 
@@ -51,6 +88,16 @@ export default defineComponent({
 .table-wrapper {
   width: 100%;
   overflow-x: auto;
+
+  .data-table {
+    margin-bottom: 1rem;
+  }
+
+  .pagination-container {
+    display: flex;
+    justify-content: flex-end;
+    padding: 1rem;
+  }
 
   &::-webkit-scrollbar {
     height: 8px;

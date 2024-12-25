@@ -12,9 +12,13 @@
         <TableComponent
           :rows="files"
           :visible-columns="visibleColumns"
+          :pagination="pagination"
+          :page-size="pageSize"
           @edit="handleEdit"
           @delete="handleDelete"
           @copy="copyLink"
+          @page-change="$emit('page-change', $event)"
+          @size-change="$emit('size-change', $event)"
         />
       </div>
     </div>
@@ -104,9 +108,17 @@ export default defineComponent({
       type: Array as PropType<File[]>,
       required: true,
     },
+    pagination: {
+      type: Object as PropType<any>,
+      required: true,
+    },
+    pageSize: {
+      type: Number,
+      required: true,
+    },
   },
 
-  emits: ['delete', 'update'],
+  emits: ['delete', 'update', 'page-change', 'size-change'],
 
   setup(props, { emit }) {
     const showToast = ref(false)
@@ -226,7 +238,7 @@ export default defineComponent({
 .table-container {
   position: relative;
   min-height: 30vh;
-  max-height: 54vh;
+  max-height: 66vh;
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
