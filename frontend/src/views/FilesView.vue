@@ -3,7 +3,6 @@
     <div class="header">
       <div class="title-section">
         <h1>Files Management</h1>
-        <p class="subtitle">Manage and organize your files</p>
       </div>
     </div>
 

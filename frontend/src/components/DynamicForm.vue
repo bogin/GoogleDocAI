@@ -34,21 +34,6 @@
               :placeholder="`Select ${field.label}`"
               :options="field.options!"
             />
-
-            <!-- <select
-              :id="field.name"
-              v-model="formData[field.name]"
-              :required="field.required"
-            >
-              <option value="" disabled>Select {{ field.label }}</option>
-              <option
-                v-for="option in field.options"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.label }}
-              </option>
-            </select> -->
           </template>
 
           <template v-if="field.type === 'checkbox'">

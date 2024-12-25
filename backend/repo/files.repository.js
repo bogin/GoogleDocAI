@@ -1,7 +1,6 @@
 const { FileOwner, User, File, sequelize } = require('../models');
 
 const fileOwnerRepository = require('./fileOwner.repository');
-const userRepository = require('./user.repository');
 
 class FilesRepository {
 
