@@ -1,37 +1,30 @@
-const { File, User, FileOwner } = require('../models');
+const {sequelize} = require('../models');
 const openAIService = require('./openai/openai-analytics.service');
 
 class AnalyticsService {
     async analyzeQuery(query) {
-        let queryConfig;
+        let queryString;
         try {
-            queryConfig = await openAIService.generateQuery({
+            queryString = await openAIService.generateQuery({
                 query
             });
 
-            await this.validateQuery(queryConfig);
-
-            if (!queryConfig || !queryConfig.model || !queryConfig.function || !queryConfig.params) {
-                throw new Error('Invalid query configuration generated');
-            }
-
-            const result = await this.executeQuery(queryConfig);
-
+            const [result, metadata] = await sequelize.query(queryString);
             return {
                 success: true,
                 query: query,
-                method: queryConfig.function,
                 result: result,
                 metadata: {
                     timestamp: new Date(),
-                    queryConfig: queryConfig
+                    queryConfig: queryString
                 }
             };
 
         } catch (error) {
             console.error('Analytics query failed:', {
                 message: error.message,
-                queryConfig: JSON.stringify(queryConfig, null, 4)
+                query: query,
+                queryConfig: JSON.stringify(queryString, null, 4)
             });
             return {
                 success: false,
@@ -42,35 +35,6 @@ class AnalyticsService {
                 }
             };
         }
-    }
-
-    async executeQuery(queryConfig) {
-        const { model, function: method, params } = queryConfig;
-
-        if (!model || !method || !params) {
-            throw new Error('Missing query configuration for model, method, or params');
-        }
-
-        const modelInstance = this.getModelInstance(model);
-
-        return modelInstance[method](params);
-    }
-
-    getModelInstance(model) {
-        switch (model) {
-            case 'File': return File;
-            case 'User': return User;
-            case 'FileOwner': return FileOwner;
-            default: throw new Error(`Unknown model: ${model}`);
-        }
-    }
-
-    async validateQuery(queryConfig) {
-        if (!queryConfig.params || typeof queryConfig.params !== 'object') {
-            throw new Error('Invalid params configuration');
-        }
-
-        return true;
     }
 }
 

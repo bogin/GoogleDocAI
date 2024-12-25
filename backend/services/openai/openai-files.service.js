@@ -1,230 +1,226 @@
 const cacheService = require('./cache.service');
-require('sequelize');
 const BaseOpenAIService = require('./open-ai.abstract.service');
 
 class FilesOpenAIService extends BaseOpenAIService {
   systemPrompt = `
-  You are a SQL query generator for a database storing Google Drive-like files.
-  Generate valid Sequelize query objects based on the following schemas, rules, and examples.
+ You are a SQL query generator for a database storing Google Drive-like files.
+  Translate human-friendly text into Postgres terms aligned with the following schema definitions, rules, and examples.
+
+  I will use this query for this:
+  const {sequelize} = require('../../models');
+  const [results, metadata] = await sequelize.query(query);
 
   **Schemas:**
-  - File:
-    - id: string (primary key)
+  - File: (tableName: 'files')
+    - id: character varying(255) (primary key)
     - name: text
-    - mimeType: string
-    - iconLink: string
-    - webViewLink: string
-    - size: string
-    - shared: boolean
-    - trashed: boolean
-    - createdTime: timestamp
-    - modifiedTime: timestamp
-    - version: string
-    - permissions: JSONB (array of permissions with fields: id, role, type, emailAddress, displayName)
-    - capabilities: JSONB
-    - syncStatus: string
-    - lastSyncAttempt: timestamp
-    - metadata: JSONB
-    - userId: integer (foreign key to User)
+    - mime_type: character varying(255)
+    - icon_link: character varying(255)
+    - web_view_link: character varying(255)
+    - size: character varying(255)
+    - shared: boolean (default: false)
+    - trashed: boolean (default: false)
+    - created_time: timestamp with time zone
+    - modified_time: timestamp with time zone
+    - version: character varying(255)
+    - last_modifying_user: jsonb
+    - permissions: jsonb
+    - capabilities: jsonb
+    - sync_status: character varying(255) (default: 'pending')
+    - last_sync_attempt: timestamp with time zone
+    - error_log: jsonb
+    - metadata: jsonb
+    - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+    - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+    - deleted_at: timestamp with time zone
+    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE SET NULL)
+    Indexes:
+    - files_mime_type (mime_type)
+    - files_modified_time (modified_time)
+    - files_sync_status (sync_status)
+    - files_trashed (trashed)
 
-  - User:
-    - id: integer (primary key)
-    - permissionId: string
-    - email: string
-    - displayName: string
-    - photoLink: string
-    - totalFiles: integer
-    - totalSize: bigint
+  - User: (tableName: 'users')
+    - id: integer (primary key, auto-increment)
+    - permission_id: character varying(255) (unique)
+    - email: character varying(255) (unique)
+    - display_name: character varying(255)
+    - photo_link: character varying(255)
+    - total_files: integer (default: 0)
+    - total_size: bigint (default: 0)
+    - created_at: timestamp with time zone
+    - updated_at: timestamp with time zone
+    Indexes:
+    - users_email (email)
+    - users_permission_id (permission_id)
 
-  - FileOwner:
-    - fileId: string (foreign key to File)
-    - userId: integer (foreign key to User)
-    - permissionRole: string
-
-  **Rules:**
-  1. Always use Sequelize operators ("Op.contains", "Op.and", "Op.or", etc.) for queries.
-  2. For nested queries, use "include" to join models ("File", "User", "FileOwner").
-  3. Translate user-friendly terms (e.g., "username") into schema fields (e.g., "displayName").
-  4. For JSONB queries, use "Op.contains" for exact matches and "Op.jsonPath" for more advanced queries.
-  5. Validate the query's language and logic before generating SQL.
-  6. Return an error if the query is unrelated to file search or permissions.
-  7. Provide paginated results when "page" and "size" are specified.
-  8. If a query involves finding records with no associated relationship (e.g., "files without users"), use required: false in the include clause and filter where the associated model's ID is null.
-  9. Always output valid JavaScript code for the generated Sequelize query.
-  10. If a query cannot be handled, return an error message in the format: "Error: real error". Avoid natural language explanations in the response.
-  11. When generating JavaScript code, enclose it in proper syntax and format the response clearly as a valid JSON object or code block.
-  12. Ensure pagination (limit and offset) is included if the query specifies it.
-  13. If no valid query can be generated, explicitly provide the error message instead of incomplete or incorrect logic.
+  - FileOwner: (tableName: 'file_owners')
+    - id: integer (primary key, auto-increment)
+    - file_id: character varying(255) (foreign key to files.id, ON UPDATE CASCADE, ON DELETE CASCADE)
+    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE CASCADE)
+    - permission_role: character varying(255) (default: 'reader')
+    - created_at: timestamp with time zone
+    - updated_at: timestamp with time zone
+    Indexes:
+    - file_owner_unique (unique index on file_id, user_id)
   
-  **Examples for "File" queries:**
-  - "Show files owned by john@example.com":
-    {
-      include: [{
-        model: User,
-        as: 'user',
-        where: { email: 'john@example.com' }
-      }]
-    }
+  **Rules:**
+  1. JSONB Operation Rules:
+    - Use ->> for text extraction (e.g., last_modifying_user->>'emailAddress')
+    - Use -> for JSON object extraction (e.g., metadata->'owners'->0)
+    - Cast JSONB literals with ::jsonb (e.g., '{"role": "reader"}'::jsonb)
+    - Use @> for containment queries
+    - Use jsonb_array_length() for array size checks
+    - Use proper nesting for metadata.owners array access
 
-  - "Show files where anyone can comment":
-    {
-      where: {
-        permissions: {
-          [Op.contains]: [{
-            role: 'commenter',
-            type: 'anyone'
-          }]
-        }
-      }
-    }
+  2. Table Relationship Rules:
+    - Use proper table aliases (f for files, u for users, fo for file_owners)
+    - Join with ON conditions matching foreign keys exactly
+    - Use LEFT JOIN for optional relationships
+    - Always include deleted_at IS NULL for active records
 
-  - "Show files created after January 1, 2023":
-    {
-      where: {
-        createdTime: {
-          [Op.gte]: new Date('2023-01-01')
-        }
-      }
-    }
+  3. Column Name Rules:
+    - Use exact column names as defined in schema
+    - Use snake_case for all column references
+    - Include table aliases for all column references
+    - Use proper JSONB path navigation for nested fields
 
-  - "Show files that are not trashed and are shared":
-    {
-      where: {
-        [Op.and]: [
-          { trashed: false },
-          { shared: true }
-        ]
-      }
-    }
+  4. Data Type Rules:
+    - Handle timestamps with time zone awareness
+    - Use proper boolean values (true/false)
+    - Cast string values in JSONB queries
+    - Handle NULL values explicitly
 
-  **Examples for "User" queries via "File":**
-  - "Show all files for the user with displayName 'Shachar'":
-    {
-      include: [{
-        model: User,
-        as: 'user',
-        where: { displayName: 'Shachar' }
-      }]
-    }
+  5. Security Rules:
+    - Always include soft delete checks
+    - Filter by user permissions when relevant
+    - Check shared status for collaborative queries
+    - Validate file access permissions
 
-  - "Show all files where the user email contains 'example.com'":
-    {
-      include: [{
-        model: User,
-        as: 'user',
-        where: {
-          email: {
-            [Op.like]: '%example.com%'
-          }
-        }
-      }]
-    }
+  6. Pagination and Sorting:
+    - Accept offset and limit parameters
+    - Default sort by modified_time DESC
+    - Include proper index usage
+    - Support custom sorting fields
 
-  **Examples for "FileOwner" queries:**
-  - "Show all files owned by user with userId 123":
-    {
-      include: [{
-        model: FileOwner,
-        as: 'fileOwners',
-        where: { userId: 123 }
-      }]
-    }
+  7. Performance Rules:
+    - Use available indexes (mime_type, modified_time, sync_status, trashed)
+    - try to use SELECT * statements to get all the data
+    - Use specific JSONB field extraction
+    - Optimize JOIN operations
 
-  - "Show files where userId 123 is a writer":
-    {
-      include: [{
-        model: FileOwner,
-        as: 'fileOwners',
-        where: {
-          userId: 123,
-          permissionRole: 'writer'
-        }
-      }]
-    }
+  8. Error Handling:
+    - Return clear error messages
+    - Validate all input parameters
+    - Check for required fields
+    - Handle edge cases
 
-  - "Show files where the file has more than one owner":
-    {
-      include: [{
-        model: FileOwner,
-        as: 'fileOwners',
-      }],
-      where: {
-        [Op.jsonPath]: '$.fileOwners.length > 1'
-      }
-    }
+  9. Query Structure:
+    - Use consistent formatting
+    - Include proper aliasing
+    - Add relevant comments
+    - Follow standard SQL style
+  10. try to use SELECT * statements to get all the data
+ 
+  *Example Queries:**
 
-  **Advanced JSONB and Relationship Queries:**
-  - "Show files shared with anyone as commenters and owned by users in domain 'example.com'":
-    {
-      where: {
-        permissions: {
-          [Op.contains]: [{
-            role: 'commenter',
-            type: 'anyone'
-          }]
-        }
-      },
-      include: [{
-        model: User,
-        as: 'user',
-        where: {
-          email: {
-            [Op.like]: '%@example.com%'
-          }
-        }
-      }]
-    }
+   "Find documents shared with me":
+  sql
+  SELECT f.*, u.*
+  FROM files f
+  LEFT JOIN users u ON f.user_id = u.id
+  WHERE f.shared = true
+  AND f.deleted_at IS NULL
+  AND f.capabilities->>'canEdit' = 'false'
+  ORDER BY f.modified_time DESC;
 
-  - "Show files where lastSyncAttempt failed after a specific date":
-    {
-      where: {
-        [Op.and]: [
-          { syncStatus: 'failed' },
-          { lastSyncAttempt: { [Op.gte]: new Date('2023-01-01') } }
-        ]
-      }
-    }
+  "Search files by name and type":
 
-  - "Show files where metadata contains a key 'project' with value 'alpha'":
-    {
-      where: {
-        metadata: {
-          [Op.contains]: { project: 'alpha' }
-        }
-      }
-    }
+  SELECT f.*
+  FROM files f
+  WHERE f.name ILIKE '%report%'
+  AND f.mime_type = 'application/vnd.google-apps.document'
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
 
-  - "Show files where the user has uploaded more than 100 files":
-    {
-      include: [{
-        model: User,
-        as: 'user',
-        where: {
-          totalFiles: {
-            [Op.gt]: 100
-          }
-        }
-      }]
-    }
+  "Get user's file statistics":
 
-  If the query cannot be generated or is unrelated, provide a clear and concise explanation.
-`;
+  SELECT u.*, 
+        COUNT(f.id) as total_active_files,
+        SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
+        SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
+  FROM users u
+  LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
+  WHERE u.id = :userId
+  GROUP BY u.id;
 
+  "List files with specific owner permissions":
+
+  SELECT f.*
+  FROM files f
+  WHERE f.metadata->'owners'->0->>'emailAddress' LIKE '%@tabnine.com'
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
+
+  "Find files with specific capabilities":
+
+  SELECT f.*
+  FROM files f
+  WHERE f.capabilities->>'canDownload' = 'true'
+  AND f.capabilities->>'canEdit' = 'false'
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
+
+  "Get recent file modifications":
+
+  SELECT f.*, u.*
+  FROM files f
+  LEFT JOIN users u ON f.user_id = u.id
+  WHERE f.modified_time >= NOW() - INTERVAL '24 hours'
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
+
+  "List shared files with specific metadata":
+
+  SELECT f.*
+  FROM files f
+  WHERE f.shared = true
+  AND f.metadata @> '{"owners": [{"emailAddress": "amirtu@tabnine.com"}]}'::jsonb
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
+
+  "Get sync status report":
+
+  SELECT f.*
+  FROM files f
+  WHERE f.sync_status = 'failed'
+  AND f.deleted_at IS NULL
+  ORDER BY f.last_sync_attempt DESC;
+
+  "List files by ownership and type":
+
+  SELECT f.*, fo.*, u.*
+  FROM files f
+  JOIN file_owners fo ON f.id = fo.file_id
+  JOIN users u ON fo.user_id = u.id
+  WHERE f.mime_type = 'application/vnd.google-apps.document'
+  AND f.deleted_at IS NULL
+  ORDER BY f.modified_time DESC;
+    `;
   constructor() {
     super();
   }
 
-  async generateQuery({ query, page = 1, size = 10, baseConfig }) {
+  async generateQuery({ query, page = 1, size = 10, queryConfig }) {
     await this.ensureInitialized();
     try {
       const cacheKey = `${query}-${page}-${size}`;
       const cachedResult = await cacheService.get(cacheKey);
       if (cachedResult) {
-        if (cachedResult.includes("Error:")) {
-          throw new Error("Error: Query is not searchable.");
-        }
         return cachedResult;
       }
+
+      const newQueryNoTypo = await grammarAgent.processText(query);
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',
@@ -235,19 +231,30 @@ class FilesOpenAIService extends BaseOpenAIService {
           },
           {
             role: 'user',
-            content: `Generate a Sequelize query for: "${query}". Page: ${page}, PageSize: ${size}. BaseConfig: ${JSON.stringify(baseConfig)}`,
+            content: `Generate a Postgres sql query string for: "${newQueryNoTypo}". Page: ${page}, PageSize: ${size}. queryConfig: ${JSON.stringify(queryConfig)}}`,
           },
         ],
       });
 
-      const aiQueryConfig = this.parseAIQueryConfig(response?.choices[0]?.message?.content)
-      if (!aiQueryConfig) {
-        throw new Error('Query is not related to file search or permissions.');
+      const aiQueryConfig = response?.choices[0]?.message?.content
+      if (aiQueryConfig?.includes("Error:") || !aiQueryConfig) {
+        throw new Error("Error: Query is not searchable.");
       }
 
-      await cacheService.set(cacheKey, aiQueryConfig);
+      const cleanedQuery = aiQueryConfig
+        ?.replace(/```sql\n?/g, '')
+        ?.replace(/```/g, '')
+        ?.replace(/\n+/g, ' ')
+        ?.replace(/\s+/g, ' ')
+        ?.trim();
 
-      return aiQueryConfig;
+      if (!(typeof cleanedQuery === "String" && cleanedQuery.includes("Error:"))) {
+        await cacheService.set(cacheKey, cleanedQuery);
+      } else {
+        throw new Error(cleanedQuery)
+      }
+
+      return cleanedQuery;
     } catch (error) {
       throw new Error(`AI query generation failed: ${error.message}`);
     }

@@ -8,8 +8,6 @@ exports.validateAnalyticsQuery = [
         .withMessage('Query is required')
         .isLength({ max: 1000 })
         .withMessage('Query must not exceed 1000 characters')
-        .matches(/^[a-zA-Z0-9\s\-_.,?!(){}[\]"']+$/)
-        .withMessage('Query contains invalid characters')
         .escape(),
 
     body('filters')

@@ -2,397 +2,174 @@ const cacheService = require('./cache.service');
 const BaseOpenAIService = require('./open-ai.abstract.service');
 
 class OpenAIAnalyticsService extends BaseOpenAIService {
+
   systemPrompt = `
-  You are a SQL query generator for a database related to files, users, owners, and permissions. 
-Generate valid Sequelize query objects for the following schemas and rules.
-
-**Schemas:**
-- File:
-- id: string (primary key)
-- name: text
-- mimeType: string
-- iconLink: string
-- webViewLink: string
-- size: string
-- shared: boolean
-- trashed: boolean
-- createdTime: timestamp
-- modifiedTime: timestamp
-- version: string
-- permissions: JSONB (array of permissions with fields: id, role, type, emailAddress, displayName)
-- capabilities: JSONB
-- syncStatus: string
-- lastSyncAttempt: timestamp
-- metadata: JSONB
-- userId: integer (foreign key to User)
-
-migration: 
-up: async (queryInterface, Sequelize) => {
-  await queryInterface.createTable('files', {
-    id: {
-      type: Sequelize.STRING,
-      primaryKey: true,
-      allowNull: false
-    },
-    name: {
-      type: Sequelize.TEXT,
-      allowNull: false
-    },
-    mime_type: {
-      type: Sequelize.STRING
-    },
-    icon_link: {
-      type: Sequelize.STRING
-    },
-    web_view_link: {
-      type: Sequelize.STRING
-    },
-    size: {
-      type: Sequelize.STRING
-    },
-    shared: {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false
-    },
-    trashed: {
-      type: Sequelize.BOOLEAN,
-      defaultValue: false
-    },
-    created_time: {
-      type: Sequelize.DATE
-    },
-    modified_time: {
-      type: Sequelize.DATE
-    },
-    version: {
-      type: Sequelize.STRING
-    },
-    last_modifying_user: {
-      type: Sequelize.JSONB
-    },
-    permissions: {
-      type: Sequelize.JSONB
-    },
-    capabilities: {
-      type: Sequelize.JSONB
-    },
-    sync_status: {
-      type: Sequelize.STRING,
-      defaultValue: 'pending'
-    },
-    last_sync_attempt: {
-      type: Sequelize.DATE
-    },
-    error_log: {
-      type: Sequelize.JSONB
-    },
-    metadata: {
-      type: Sequelize.JSONB
-    },
-    created_at: {
-      type: Sequelize.DATE,
-      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-    },
-    updated_at: {
-      type: Sequelize.DATE,
-      defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
-    },
-    deleted_at: {
-      type: Sequelize.DATE,
-      allowNull: true,
-      defaultValue: null
-    }
-  });
-
-  // Add useful indexes
-  await queryInterface.addIndex('files', ['sync_status']);
-  await queryInterface.addIndex('files', ['modified_time']);
-  await queryInterface.addIndex('files', ['trashed']);
-  await queryInterface.addIndex('files', ['mime_type']);
-},
-- User:
-- id: integer (primary key)
-- permissionId: string
-- email: string
-- displayName: string
-- photoLink: string
-- totalFiles: integer
-- totalSize: bigint
-migration: 
-up: async (queryInterface, Sequelize) => {
-  await queryInterface.createTable('users', {
-    id: {
-      type: Sequelize.INTEGER,
-      primaryKey: true,
-      autoIncrement: true
-    },
-    permission_id: {
-      type: Sequelize.STRING,
-      unique: true,
-      allowNull: false
-    },
-    email: {
-      type: Sequelize.STRING,
-      unique: true,
-      allowNull: false
-    },
-    display_name: {
-      type: Sequelize.STRING,
-      allowNull: true
-    },
-    photo_link: {
-      type: Sequelize.STRING,
-      allowNull: true
-    },
-    total_files: {
-      type: Sequelize.INTEGER,
-      defaultValue: 0
-    },
-    total_size: {
-      type: Sequelize.BIGINT,
-      defaultValue: 0
-    },
-    created_at: {
-      type: Sequelize.DATE,
-      allowNull: false
-    },
-    updated_at: {
-      type: Sequelize.DATE,
-      allowNull: false
-    }
-  });
-
-  // Add indexes
-  await queryInterface.addIndex('users', ['email']);
-  await queryInterface.addIndex('users', ['permission_id']);
-
-  // Add foreign key to files table
-  await queryInterface.addColumn('files', 'user_id', {
-    type: Sequelize.INTEGER,
-    references: {
-      model: 'users',
-      key: 'id'
-    },
-    onUpdate: 'CASCADE',
-    onDelete: 'SET NULL'
-  });
-},
-
-- FileOwner:
-- fileId: string (foreign key to File)
-- userId: integer (foreign key to User)
-- permissionRole: string
-
-  up: async (queryInterface, Sequelize) => {
-  await queryInterface.createTable('file_owners', {
-    id: {
-      allowNull: false,
-      autoIncrement: true,
-      primaryKey: true,
-      type: Sequelize.INTEGER
-    },
-    file_id: {
-      type: Sequelize.STRING,
-      allowNull: false,
-      references: {
-        model: 'files',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    },
-    user_id: {
-      type: Sequelize.INTEGER,
-      allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      },
-      onUpdate: 'CASCADE',
-      onDelete: 'CASCADE'
-    },
-    permission_role: {
-      type: Sequelize.STRING,
-      allowNull: false,
-      defaultValue: 'reader'
-    },
-    created_at: {
-      allowNull: false,
-      type: Sequelize.DATE
-    },
-    updated_at: {
-      allowNull: false,
-      type: Sequelize.DATE
-    }
-  });
-
-  await queryInterface.addIndex('file_owners', ['file_id', 'user_id'], {
-    unique: true,
-    name: 'file_owner_unique'
-  });
-},
-
-**Rules:**
-1. Always use Sequelize operators ("Op.contains", "Op.and", "Op.or", etc.) for queries.
-2. For nested queries, use "include" to join models ("File", "User", "FileOwner").
-3. Translate user-friendly terms (e.g., "username") into schema fields (e.g., "displayName").
-4. For JSONB queries, use "Op.contains" for exact matches and "Op.jsonPath" for more advanced queries.
-5. Ensure queries are related to files, users, file owners, and permissions.
-6. Retrieve all data without applying any limit in params - unless its asked.
-7. If a query involves finding records with no associated relationship (e.g., "files without users"), use required: false in the include clause and filter where the associated model's ID is null.
-8. Return valid JavaScript code for the generated Sequelize query.
-9. If a query cannot be handled, return an error message in the format: "Error: real error".
-
-- "What is the average number of files per owner?":
-{
-model: 'FileOwner',
-function: 'findAll',
-params: {
-  attributes: [
-    'userId',
-    [Sequelize.fn('COUNT', Sequelize.col('file_id')), 'fileCount']
-  ],
-  include: [{
-    model: 'User',
-    as: 'User',  // Match the association defined in FileOwner model
-    attributes: ['email', 'display_name'], // Use underscored column name
-    required: true
-  }],
-  group: [
-    'FileOwner.user_id', 
-    'User.id',
-    'User.email', 
-    'User.display_name'  // Use underscored column name
-  ],
-  raw: true
-}
-}
-
-or 
-
-{
-model: 'User',
-function: 'findAll',
-params: {
-  attributes: [
-    'email',
-    'displayName',
-    'totalFiles',
-    [Sequelize.fn('AVG', Sequelize.col('total_files')), 'averageFiles']
-  ],
-  group: ['id', 'email', 'displayName', 'totalFiles']
-}
-}
-
-- "What is the distribution of files by their last modified date?":
-{
-model: 'File',
-function: 'findAll',
-params: {
-  attributes: [
-    [
-      Sequelize.fn('DATE', Sequelize.col('modified_time')), // Use the actual database column name
-      'modifiedTime'
-    ],
-    [
-      Sequelize.fn('COUNT', Sequelize.col('id')),
-      'fileCount'
-    ]
-  ],
-  group: [Sequelize.fn('DATE', Sequelize.col('modified_time'))] // Use consistent naming
-}
-}
+  You are a SQL query generator for a database with tables: files, users, owners, and permissions.
+  Generate valid Postgres sql query string for the following schemas and rules.
+  Translate human-friendly text into terms aligned with the following schema definitions
+  
+   **Important Guidelines:**
+  - Generate direct SQL queries, not functions or stored procedures
+  - Keep queries as simple as possible while meeting requirements
 
 
-**Examples for queries:**
-- "Show all users":
-{
-  model: 'User',
-  function: 'findAll',
-  params: {}
-}
+  **Schemas:**
+  - File: (tableName: 'files')
+    - id: character varying(255) (primary key)
+    - name: text
+    - mime_type: character varying(255)
+    - icon_link: character varying(255)
+    - web_view_link: character varying(255)
+    - size: character varying(255)
+    - shared: boolean (default: false)
+    - trashed: boolean (default: false)
+    - created_time: timestamp with time zone
+    - modified_time: timestamp with time zone
+    - version: character varying(255)
+    - last_modifying_user: jsonb
+    - permissions: jsonb
+    - capabilities: jsonb
+    - sync_status: character varying(255) (default: 'pending')
+    - last_sync_attempt: timestamp with time zone
+    - error_log: jsonb
+    - metadata: jsonb
+    - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+    - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
+    - deleted_at: timestamp with time zone
+    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE SET NULL)
+    Indexes:
+    - files_mime_type (mime_type)
+    - files_modified_time (modified_time)
+    - files_sync_status (sync_status)
+    - files_trashed (trashed)
 
-- "Show files owned by john@example.com":
-{
-  model: 'File',
-  function: 'findAll',
-  params: {
-    include: [{
-      model: User,
-      as: 'user',
-      where: { email: 'john@example.com' }
-    }]
-  }
-}
+  - User: (tableName: 'users')
+    - id: integer (primary key, auto-increment)
+    - permission_id: character varying(255) (unique)
+    - email: character varying(255) (unique)
+    - display_name: character varying(255)
+    - photo_link: character varying(255)
+    - total_files: integer (default: 0)
+    - total_size: bigint (default: 0)
+    - created_at: timestamp with time zone
+    - updated_at: timestamp with time zone
+    Indexes:
+    - users_email (email)
+    - users_permission_id (permission_id)
 
-- "Show files where anyone can comment":
-{
-  model: 'File',
-  function: 'findAll',
-  params: {
-    where: {
-      permissions: {
-        [Op.contains]: [{
-          role: 'commenter',
-          type: 'anyone'
-        }]
-      }
-    }
-  }
-}
+  - FileOwner: (tableName: 'file_owners')
+    - id: integer (primary key, auto-increment)
+    - file_id: character varying(255) (foreign key to files.id, ON UPDATE CASCADE, ON DELETE CASCADE)
+    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE CASCADE)
+    - permission_role: character varying(255) (default: 'reader')
+    - created_at: timestamp with time zone
+    - updated_at: timestamp with time zone
+    Indexes:
+    - file_owner_unique (unique index on file_id, user_id)
+  
 
-- "Who owns the most files?":
-{
-  model: 'User',
-  function: 'findOne',
-  params: {
-    order: [['totalFiles', 'DESC']],
-    limit: 1
-  }
-}
+  **Rules:**
+  1. Basic Query Rules:
+    - Use proper table names and aliases
+    - Include all necessary JOIN conditions
+    - Always handle deleted_at IS NULL for Files
+    - Use proper schema qualifiers (public.)
+    - Return complete SQL strings
 
-- "Which file was modified most recently?":
-{
-  model: 'File',
-  function: 'findOne',
-  params: {
-    order: [['modifiedTime', 'DESC']],
-    limit: 1
-  }
-}
+  2. Translate human-friendly text into terms aligned with the following schema definitions
+  3. Timestamp Rules:
+    - Use proper timezone handling
+    - Use INTERVAL for time calculations
+    - Format timestamps properly
+    - Handle NULL timestamp values
 
-- "What is the average number of files per owner?":
-{
-  model: 'User',
-  function: 'findAll',
-  params: {
-    attributes: [
-      [Sequelize.fn('AVG', Sequelize.col('totalFiles')), 'avgFiles']
-    ]
-  }
-}
+  4. Join Rules:
+    - Use proper JOIN types (LEFT JOIN, INNER JOIN)
+    - Include all necessary join conditions
+    - Handle multiple table joins efficiently
+    - Use proper table aliases
 
-- "Which file is the largest?":
-{
-  model: 'File',
-  function: 'findOne',
-  params: {
-    order: [['size', 'DESC']],
-    limit: 1
-  }
-}
+  6. Filtering Rules:
+    - Handle multiple conditions properly
+    - Use proper operators (LIKE, ILIKE, =, etc.)
+    - Handle NULL values correctly
+    - Use proper boolean logic
 
-- "What is the distribution of files by their last modified date?":
-{
-  model: 'File',
-  function: 'findAll',
-  params: {
-    attributes: ['modifiedTime', [Sequelize.fn('COUNT', Sequelize.col('id')), 'count']],
-    group: ['modifiedTime']
-  }
-}
-`;
+  8. Pagination Rules:
+    - dont Use OFFSET and LIMIT unless asked
 
+
+  **Examples:**
+
+
+    1. "Show all users":
+      SELECT * FROM public.users
+      ORDER BY created_at DESC;
+
+      "Show all active files":
+
+      SELECT * FROM public.files
+      WHERE deleted_at IS NULL
+      ORDER BY modified_time DESC;
+
+      1. "Find active shared documents":
+      SELECT f.*, 
+            f.last_modifying_user->> 'emailAddress' as modifier_email,
+        f.metadata -> 'owners' -> 0 ->> 'emailAddress' as owner_email
+      FROM public.files f
+      WHERE f.shared = true 
+      AND f.deleted_at IS NULL
+      AND f.capabilities ->> 'canEdit' = 'false'
+      ORDER BY f.modified_time DESC
+      LIMIT:limit OFFSET: offset;
+
+      "Search files by name and owner":
+
+      SELECT f.*, u.email as owner_email
+      FROM public.files f
+      LEFT JOIN public.users u ON f.user_id = u.id
+      WHERE f.name ILIKE: searchTerm
+      AND f.deleted_at IS NULL
+      AND u.email LIKE '%@domain.com'
+      ORDER BY f.modified_time DESC
+      LIMIT:limit OFFSET: offset;
+
+      "Get file statistics for user":
+
+      SELECT
+      u.email,
+        COUNT(f.id) as total_files,
+        SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
+        SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
+      FROM public.users u
+      LEFT JOIN public.files f ON u.id = f.user_id 
+      WHERE u.id = : userId
+      AND f.deleted_at IS NULL
+      GROUP BY u.id, u.email;
+
+      "List files with specific permissions":
+
+      SELECT f.*, fo.permission_role
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      WHERE fo.user_id = : userId
+      AND f.deleted_at IS NULL
+      AND fo.permission_role = : role
+      ORDER BY f.modified_time DESC;
+
+      "Get recently modified files":
+
+      SELECT f.*,
+        f.last_modifying_user ->> 'displayName' as modifier_name,
+        f.metadata -> 'owners' -> 0 ->> 'emailAddress' as owner_email
+      FROM public.files f
+      WHERE f.modified_time >= NOW() - INTERVAL '24 hours'
+      AND f.deleted_at IS NULL
+      ORDER BY f.modified_time DESC;
+
+      If the query cannot be generated or is unrelated, I will provide a clear and concise explanation in this format:
+      "Error: [Specific error message]. [Natural language explanation of the issue]"
+  `;
   constructor() {
     super();
   }
@@ -400,7 +177,7 @@ params: {
   async generateQuery({ query }) {
     await this.ensureInitialized();
     try {
-      const cacheKey = `${query}`;
+      const cacheKey = `${query} `;
       const cachedResult = await cacheService.get(cacheKey);
       if (cachedResult) {
         return cachedResult;
@@ -415,21 +192,28 @@ params: {
           },
           {
             role: 'user',
-            content: `Generate a Sequelize query function for: "${query}".`,
+            content: `Generate a Postgress sql query function for: "${query}".`,
           },
         ],
       });
 
-      const aiQueryConfig = this.parseAIQueryConfig(response?.choices[0]?.message?.content)
-      if (!aiQueryConfig || !aiQueryConfig.model || !aiQueryConfig.function || !aiQueryConfig.params) {
-        throw new Error('Query is not related to file search or permissions.');
+      const cleanedQuery = response?.choices[0]?.message?.content
+        ?.replace(/```sql\n?/g, '')
+        ?.replace(/```/g, '')
+        ?.replace(/\n+/g, ' ')
+        ?.replace(/\s+/g, ' ')
+        ?.trim();
+
+
+      if (!(typeof cleanedQuery === "String" && cleanedQuery.includes("Error:"))) {
+        await cacheService.set(cacheKey, cleanedQuery);
+      } else {
+        throw new Error(cleanedQuery)
       }
 
-      await cacheService.set(cacheKey, aiQueryConfig);
-
-      return aiQueryConfig;
+      return cleanedQuery;
     } catch (error) {
-      throw new Error(`AI query generation failed: ${error.message}`);
+      throw new Error(`AI query generation failed: ${error.message} `);
     }
   }
 }

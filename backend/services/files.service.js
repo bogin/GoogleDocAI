@@ -1,7 +1,7 @@
 const { Op } = require('sequelize');
-const { isEmpty } = require("lodash");
 const filesRepository = require('../repo/files.repository');
 const openaiService = require('./openai/openai-files.service');
+const { sequelize } = require('../models');
 
 const PAGINATION_DEFAULTS = {
   page: 1,
@@ -13,16 +13,59 @@ class FilesService {
     const page = options.page ? parseInt(options.page) : PAGINATION_DEFAULTS.page;
     const size = options.size ? parseInt(options.size) : PAGINATION_DEFAULTS.size;
 
-    const queryConfig = await this.buildQueryConfig({ page, size, filters: options?.filters || {} });
-    const { count, rows } = await filesRepository.findAll({...queryConfig});
-    
+    const queryConfig = this.buildBaseQueryConfig(page, size);
+
+    if (options?.filters?.modifiedTime) {
+      queryConfig.where.modifiedTime = {
+        [Op.gte]: options.filters.modifiedTime
+      };
+    }
+
+    let count, rows;
+    if (options?.filters?.query) {
+      const string = await this.getQueryStringWithAI(options.filters.query, page, size, queryConfig);
+
+      const [results, metadata] = await sequelize.query(string);
+      rows = results;
+      count = metadata.rowCount
+    } else {
+      const results = await filesRepository.findAll({ ...queryConfig });
+      rows = results.rows;
+      count = results.count;
+    }
+
     const processedFiles = this.processFilePermissions(rows);
     return this.buildPaginatedResponse(processedFiles, count, page, size);
   }
 
+  getInCamalCase(file) {
+    const toCamelCase = (str) => {
+      return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+    };
+
+    const convertToCamelCase = (obj) => {
+      if (Array.isArray(obj)) {
+        return obj.map(item => convertToCamelCase(item));
+      }
+
+      if (obj && typeof obj === 'object') {
+        return Object.keys(obj).reduce((result, key) => {
+          const camelKey = toCamelCase(key);
+          const value = obj[key];
+          result[camelKey] = convertToCamelCase(value);
+          return result;
+        }, {});
+      }
+
+      return obj;
+    };
+
+    return convertToCamelCase(file);
+  }
+  
   processFilePermissions(files) {
     return files.map(file => {
-      const fileData = file.toJSON();
+      const fileData = !!file?.toJSON ? file.toJSON() : this.getInCamalCase(file);
       const permissions = file.permissions || [];
 
       fileData.owners = this.extractOwners(permissions);
@@ -69,26 +112,6 @@ class FilesService {
     };
   }
 
-  async buildQueryConfig({ page, size, filters }) {
-    const queryConfig = this.buildBaseQueryConfig(page, size);
-
-    if (filters.modifiedTime) {
-      try {
-        queryConfig.where.modifiedTime = {
-          [Op.gte]: filters.modifiedTime
-        };
-      } catch (error) {
-        console.error('Invalid date format:', error);
-      }
-    }
-
-    if (filters?.query) {
-      await this.enrichQueryConfigWithAI(filters.query, page, size, queryConfig);
-    }
-
-    return queryConfig;
-  }
-
   buildBaseQueryConfig(page, size) {
     return {
       where: {},
@@ -98,43 +121,19 @@ class FilesService {
     };
   }
 
-  async enrichQueryConfigWithAI(query, page, size, queryConfig) {
+  async getQueryStringWithAI(query, page, size, queryConfig) {
     try {
-      const aiQueryConfig = await openaiService.generateQuery({
+      const aiQueryString = await openaiService.generateQuery({
         query,
         page,
         size,
-        baseConfig: queryConfig
+        queryConfig,
       });
 
-      this.mergeAIQueryConditions(queryConfig, aiQueryConfig);
+      return aiQueryString;
     } catch (error) {
       throw new Error(`Invalid query parameters: ${error.message}`);
     }
-  }
-
-  mergeAIQueryConditions(queryConfig, aiQueryConfig) {
-    if (aiQueryConfig.where) {
-      queryConfig.where = this.mergeWhereConditions(queryConfig.where, aiQueryConfig.where);
-    }
-
-    if (aiQueryConfig.order) {
-      queryConfig.order = aiQueryConfig.order;
-    }
-  }
-
-  mergeWhereConditions(existingWhere, aiWhere) {
-    const conditions = [];
-
-    if (!isEmpty(existingWhere)) {
-      conditions.push(existingWhere);
-    }
-
-    if (!isEmpty(aiWhere)) {
-      conditions.push(aiWhere);
-    }
-
-    return conditions.length > 1 ? { [Op.and]: conditions } : conditions[0] || {};
   }
 
   async getFileById(fileId) {

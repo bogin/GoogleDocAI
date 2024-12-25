@@ -1,11 +1,6 @@
 const OpenAI = require('openai');
 const systemSettingsService = require('../system-settings.service');
 const EventEmitter = require('events');
-const { VM } = require('vm2');
-const { Op, Sequelize } = require('sequelize');
-const { File, FileOwner, User } = require('../../models');
-require('sequelize');
-const moment = require('moment');
 
 class BaseOpenAIService extends EventEmitter {
     constructor() {
@@ -16,37 +11,6 @@ class BaseOpenAIService extends EventEmitter {
         this.configurationPromise = null;
         this.configResolver = null;
         this.initialize();
-    }
-
-    parseAIQueryConfig(aiQueryConfigRaw) {
-        if (aiQueryConfigRaw.includes("Error:")) {
-            throw new Error("Error: Query is not searchable.");
-        }
-
-        const cleanedConfig = aiQueryConfigRaw
-            ?.replace(/```(?:javascript)?\n?/, '')
-            ?.replace(/(?:js)?\n?/, '')
-            ?.replace(/(?:on)?\n?/, '')
-            ?.replace(/```$/, '');
-
-        const vm = new VM({
-            sandbox: {
-                Sequelize,
-                Op,
-                require,
-                console,
-                User,
-                File,
-                moment,
-                FileOwner,
-            },
-        });
-
-        try {
-            return vm.run(`(${cleanedConfig})`);
-        } catch (error) {
-            throw new Error(`Failed to parse AI-generated query configuration: ${error.message}`);
-        }
     }
 
     async waitForConfiguration() {
