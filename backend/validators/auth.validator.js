@@ -6,16 +6,12 @@ exports.validateAuthCode = [
         .notEmpty()
         .withMessage('Authorization code is required')
         .isString()
-        .withMessage('Invalid authorization code format')
-        .matches(/^[A-Za-z0-9_-]+$/)
-        .withMessage('Authorization code contains invalid characters'),
+        .withMessage('Invalid authorization code format'),
 
     query('state')
         .optional()
         .isString()
-        .withMessage('Invalid state parameter')
-        .matches(/^[A-Za-z0-9_-]+$/)
-        .withMessage('State parameter contains invalid characters'),
+        .withMessage('Invalid state parameter'),
 
     query('error')
         .optional()

@@ -8,10 +8,15 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
   Generate valid Postgres sql query string for the following schemas and rules.
   Translate human-friendly text into terms aligned with the following schema definitions
   
+  I will use yor response for this:
+  const {sequelize} = require('../../models');
+  const [results, metadata] = await sequelize.query(query);
+
+  so output onlt Postgress sql string - without extra text
+
    **Important Guidelines:**
   - Generate direct SQL queries, not functions or stored procedures
   - Keep queries as simple as possible while meeting requirements
-
 
   **Schemas:**
   - File: (tableName: 'files')
@@ -36,7 +41,7 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
     - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
     - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
     - deleted_at: timestamp with time zone
-    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE SET NULL)
+    
     Indexes:
     - files_mime_type (mime_type)
     - files_modified_time (modified_time)
@@ -95,76 +100,103 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
     - Handle NULL values correctly
     - Use proper boolean logic
 
+  7. Output only the  Postgres sql query or error - without unrelated text!.
+  
+    I will use yor response for this:
+    const {sequelize} = require('../../models');
+    const [results, metadata] = await sequelize.query(query);
+
+    so output onlt Postgress sql string - without extra text
   8. Pagination Rules:
     - dont Use OFFSET and LIMIT unless asked
 
-
-  **Examples:**
-
-
-    1. "Show all users":
-      SELECT * FROM public.users
+  - EXAMPLES:
+      1. "Show all users":
+      SELECT * 
+      FROM public.users
       ORDER BY created_at DESC;
 
-      "Show all active files":
+      2. "Show all active files":
+      SELECT * 
+      FROM public.files f
+      WHERE f.deleted_at IS NULL
+      ORDER BY f.modified_time DESC;
 
-      SELECT * FROM public.files
-      WHERE deleted_at IS NULL
-      ORDER BY modified_time DESC;
-
-      1. "Find active shared documents":
+      3. "Find active shared documents":
       SELECT f.*, 
-            f.last_modifying_user->> 'emailAddress' as modifier_email,
-        f.metadata -> 'owners' -> 0 ->> 'emailAddress' as owner_email
+            f.last_modifying_user->>'emailAddress' as modifier_email,
+            f.metadata->'owners'->0->>'emailAddress' as owner_email
       FROM public.files f
       WHERE f.shared = true 
       AND f.deleted_at IS NULL
-      AND f.capabilities ->> 'canEdit' = 'false'
+      AND f.capabilities->>'canEdit' = 'false'
       ORDER BY f.modified_time DESC
-      LIMIT:limit OFFSET: offset;
+      LIMIT :limit OFFSET :offset;
 
-      "Search files by name and owner":
-
+      4. "Search files by owner email":
       SELECT f.*, u.email as owner_email
       FROM public.files f
-      LEFT JOIN public.users u ON f.user_id = u.id
-      WHERE f.name ILIKE: searchTerm
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.name ILIKE :searchTerm
       AND f.deleted_at IS NULL
       AND u.email LIKE '%@domain.com'
       ORDER BY f.modified_time DESC
-      LIMIT:limit OFFSET: offset;
+      LIMIT :limit OFFSET :offset;
 
-      "Get file statistics for user":
-
-      SELECT
-      u.email,
-        COUNT(f.id) as total_files,
-        SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
-        SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
+      5. "Get file statistics for user":
+      SELECT 
+          u.email,
+          COUNT(DISTINCT f.id) as total_files,
+          SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
+          SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
       FROM public.users u
-      LEFT JOIN public.files f ON u.id = f.user_id 
-      WHERE u.id = : userId
+      JOIN public.file_owners fo ON u.id = fo.user_id
+      JOIN public.files f ON fo.file_id = f.id
+      WHERE u.id = :userId
       AND f.deleted_at IS NULL
       GROUP BY u.id, u.email;
 
-      "List files with specific permissions":
-
+      6. "List files with specific permissions":
       SELECT f.*, fo.permission_role
       FROM public.files f
       JOIN public.file_owners fo ON f.id = fo.file_id
-      WHERE fo.user_id = : userId
+      WHERE fo.user_id = :userId
       AND f.deleted_at IS NULL
-      AND fo.permission_role = : role
+      AND fo.permission_role = :role
       ORDER BY f.modified_time DESC;
 
-      "Get recently modified files":
-
+      7. "Get recently modified files":
       SELECT f.*,
-        f.last_modifying_user ->> 'displayName' as modifier_name,
-        f.metadata -> 'owners' -> 0 ->> 'emailAddress' as owner_email
+            f.last_modifying_user->>'displayName' as modifier_name,
+            f.metadata->'owners'->0->>'emailAddress' as owner_email
       FROM public.files f
       WHERE f.modified_time >= NOW() - INTERVAL '24 hours'
       AND f.deleted_at IS NULL
+      ORDER BY f.modified_time DESC;
+
+      8. "List files shared with multiple users":
+      SELECT f.*, 
+            COUNT(DISTINCT fo.user_id) as shared_with_count,
+            array_agg(u.email) as shared_with_emails
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.deleted_at IS NULL
+      GROUP BY f.id
+      HAVING COUNT(DISTINCT fo.user_id) > 1
+      ORDER BY f.modified_time DESC;
+
+      9. "Get files with specific mime type and owner permissions":
+      SELECT f.*, 
+            array_agg(DISTINCT fo.permission_role) as permission_roles,
+            array_agg(DISTINCT u.email) as owner_emails
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.mime_type = :mimeType
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
       ORDER BY f.modified_time DESC;
 
       If the query cannot be generated or is unrelated, I will provide a clear and concise explanation in this format:
@@ -179,9 +211,9 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
     try {
       const cacheKey = `${query} `;
       const cachedResult = await cacheService.get(cacheKey);
-      if (cachedResult) {
-        return cachedResult;
-      }
+      // if (cachedResult) {
+      //   return cachedResult;
+      // }
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',

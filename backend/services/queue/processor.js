@@ -179,15 +179,15 @@ class FileProcessorService {
                 size: fileData.size ? String(fileData.size) : null,
                 shared: Boolean(fileData.shared),
                 trashed: Boolean(fileData.trashed),
-                createdTime: fileData.createdTime ? new Date(fileData.createdTime) : null,
-                modifiedTime: fileData.modifiedTime ? new Date(fileData.modifiedTime) : null,
+                createdTime: fileData.createdTime ? new Date(fileData.createdTime).toISOString() : null,
+                modifiedTime: fileData.modifiedTime ? new Date(fileData.modifiedTime).toISOString() : null,
                 version: fileData.version ? String(fileData.version) : null,
                 lastModifyingUser: fileData.lastModifyingUser || null,
                 permissions: Array.isArray(fileData.permissions) ? fileData.permissions : [],
                 capabilities: fileData.capabilities || null,
                 metadata: fileData,
                 syncStatus: 'success',
-                lastSyncAttempt: new Date()
+                lastSyncAttempt: new Date().toISOString()
             };
         } catch (error) {
             throw new Error(`Failed to sanitize file data: ${error.message}`);

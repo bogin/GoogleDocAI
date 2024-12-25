@@ -1,6 +1,6 @@
 const {sequelize} = require('../models');
 const openAIService = require('./openai/openai-analytics.service');
-
+const { uniqBy } = require('lodash');
 class AnalyticsService {
     async analyzeQuery(query) {
         let queryString;
@@ -13,7 +13,7 @@ class AnalyticsService {
             return {
                 success: true,
                 query: query,
-                result: result,
+                result: uniqBy(result, 'id'),
                 metadata: {
                     timestamp: new Date(),
                     queryConfig: queryString

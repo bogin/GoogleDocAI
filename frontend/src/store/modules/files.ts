@@ -74,12 +74,14 @@ const files: Module<FilesState, RootState> = {
             ? JSON.stringify(payload.filters)
             : undefined,
         })
-        console.log(response)
+
         if (response.data.error) {
           console.log(response.data.error)
           commit('SET_ERROR', response.data.error)
           commit('SET_LOADING', false)
           return
+        } else {
+          commit('SET_ERROR', null)
         }
         commit('SET_FILES', {
           files: response.data.files,

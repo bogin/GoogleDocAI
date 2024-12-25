@@ -1,4 +1,5 @@
 const cacheService = require('./cache.service');
+const grammarAgentService = require('./grammar-agent.service');
 const BaseOpenAIService = require('./open-ai.abstract.service');
 
 class FilesOpenAIService extends BaseOpenAIService {
@@ -6,7 +7,7 @@ class FilesOpenAIService extends BaseOpenAIService {
  You are a SQL query generator for a database storing Google Drive-like files.
   Translate human-friendly text into Postgres terms aligned with the following schema definitions, rules, and examples.
 
-  I will use this query for this:
+  I will use your output query for this:
   const {sequelize} = require('../../models');
   const [results, metadata] = await sequelize.query(query);
 
@@ -33,7 +34,7 @@ class FilesOpenAIService extends BaseOpenAIService {
     - created_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
     - updated_at: timestamp with time zone (default: CURRENT_TIMESTAMP)
     - deleted_at: timestamp with time zone
-    - user_id: integer (foreign key to users.id, ON UPDATE CASCADE, ON DELETE SET NULL)
+
     Indexes:
     - files_mime_type (mime_type)
     - files_modified_time (modified_time)
@@ -123,89 +124,109 @@ class FilesOpenAIService extends BaseOpenAIService {
   10. try to use SELECT * statements to get all the data
  
   *Example Queries:**
+     
+    1. "Find documents shared with me":
+      SELECT DISTINCT f.*, 
+            fo.permission_role,
+            u.email as owner_email
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.shared = true
+      AND f.deleted_at IS NULL
+      AND f.capabilities->>'canEdit' = 'false'
+      AND fo.user_id = :currentUserId
+      ORDER BY f.modified_time DESC;
 
-   "Find documents shared with me":
-  sql
-  SELECT f.*, u.*
-  FROM files f
-  LEFT JOIN users u ON f.user_id = u.id
-  WHERE f.shared = true
-  AND f.deleted_at IS NULL
-  AND f.capabilities->>'canEdit' = 'false'
-  ORDER BY f.modified_time DESC;
+    2. "Search files by name and type":
+      SELECT f.*
+      FROM public.files f
+      WHERE f.name ILIKE '%report%'
+      AND f.mime_type = 'application/vnd.google-apps.document'
+      AND f.deleted_at IS NULL
+      ORDER BY f.modified_time DESC;
 
-  "Search files by name and type":
+    3. "Get user's file statistics":
+      SELECT u.email, 
+            COUNT(DISTINCT f.id) as total_active_files,
+            SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
+            SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
+      FROM public.users u
+      JOIN public.file_owners fo ON u.id = fo.user_id
+      JOIN public.files f ON fo.file_id = f.id AND f.deleted_at IS NULL
+      WHERE u.id = :userId
+      GROUP BY u.id, u.email;
 
-  SELECT f.*
-  FROM files f
-  WHERE f.name ILIKE '%report%'
-  AND f.mime_type = 'application/vnd.google-apps.document'
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
+    4. "List files with specific owners":
+      SELECT DISTINCT f.*, 
+            array_agg(DISTINCT u.email) as owner_emails,
+            array_agg(DISTINCT fo.permission_role) as permission_roles
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE u.email LIKE '%@tabnine.com'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.modified_time DESC;
 
-  "Get user's file statistics":
+    5. "Find files with specific capabilities":
+      SELECT f.*,
+            array_agg(DISTINCT u.email) as owner_emails
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.capabilities->>'canDownload' = 'true'
+      AND f.capabilities->>'canEdit' = 'false'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.modified_time DESC;
 
-  SELECT u.*, 
-        COUNT(f.id) as total_active_files,
-        SUM(CASE WHEN f.trashed THEN 1 ELSE 0 END) as trashed_files,
-        SUM(CASE WHEN f.shared THEN 1 ELSE 0 END) as shared_files
-  FROM users u
-  LEFT JOIN files f ON u.id = f.user_id AND f.deleted_at IS NULL
-  WHERE u.id = :userId
-  GROUP BY u.id;
+    6. "Get recent file modifications":
+      SELECT DISTINCT f.*,
+            array_agg(DISTINCT u.email) as owner_emails,
+            f.last_modifying_user->>'emailAddress' as last_modifier
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.modified_time >= NOW() - INTERVAL '24 hours'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.modified_time DESC;
 
-  "List files with specific owner permissions":
+    7. "List shared files with specific owners":
+      SELECT DISTINCT f.*,
+            array_agg(DISTINCT fo.permission_role) as permission_roles
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.shared = true
+      AND u.email = 'amirtu@tabnine.com'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.modified_time DESC;
 
-  SELECT f.*
-  FROM files f
-  WHERE f.metadata->'owners'->0->>'emailAddress' LIKE '%@tabnine.com'
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
+    8. "Get sync status report":
+      SELECT f.*,
+            array_agg(DISTINCT u.email) as owner_emails
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.sync_status = 'failed'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.last_sync_attempt DESC;
 
-  "Find files with specific capabilities":
-
-  SELECT f.*
-  FROM files f
-  WHERE f.capabilities->>'canDownload' = 'true'
-  AND f.capabilities->>'canEdit' = 'false'
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
-
-  "Get recent file modifications":
-
-  SELECT f.*, u.*
-  FROM files f
-  LEFT JOIN users u ON f.user_id = u.id
-  WHERE f.modified_time >= NOW() - INTERVAL '24 hours'
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
-
-  "List shared files with specific metadata":
-
-  SELECT f.*
-  FROM files f
-  WHERE f.shared = true
-  AND f.metadata @> '{"owners": [{"emailAddress": "amirtu@tabnine.com"}]}'::jsonb
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
-
-  "Get sync status report":
-
-  SELECT f.*
-  FROM files f
-  WHERE f.sync_status = 'failed'
-  AND f.deleted_at IS NULL
-  ORDER BY f.last_sync_attempt DESC;
-
-  "List files by ownership and type":
-
-  SELECT f.*, fo.*, u.*
-  FROM files f
-  JOIN file_owners fo ON f.id = fo.file_id
-  JOIN users u ON fo.user_id = u.id
-  WHERE f.mime_type = 'application/vnd.google-apps.document'
-  AND f.deleted_at IS NULL
-  ORDER BY f.modified_time DESC;
+    9. "List files by ownership and type":
+      SELECT DISTINCT f.*,
+            array_agg(DISTINCT u.email) as owner_emails,
+            array_agg(DISTINCT fo.permission_role) as permission_roles
+      FROM public.files f
+      JOIN public.file_owners fo ON f.id = fo.file_id
+      JOIN public.users u ON fo.user_id = u.id
+      WHERE f.mime_type = 'application/vnd.google-apps.document'
+      AND f.deleted_at IS NULL
+      GROUP BY f.id
+      ORDER BY f.modified_time DESC;
     `;
   constructor() {
     super();
@@ -220,7 +241,7 @@ class FilesOpenAIService extends BaseOpenAIService {
         return cachedResult;
       }
 
-      const newQueryNoTypo = await grammarAgent.processText(query);
+      const newQueryNoTypo = await grammarAgentService.processText(query);
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',

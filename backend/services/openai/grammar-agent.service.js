@@ -16,5 +16,5 @@ class GrammarAgentService extends BaseOpenAIService {
         return response.choices[0].message.content;
     }
 }
-
-module.exports = GrammarAgentService;
+const grammarAgentService = new GrammarAgentService();
+module.exports = grammarAgentService;
