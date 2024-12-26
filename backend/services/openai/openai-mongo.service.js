@@ -57,7 +57,13 @@ class MongoFileOpenAIService extends BaseOpenAIService {
     try {
       const cacheKey = `mongo_pipeline_${query}_${page}_${size}`;
       const cachedResult = await cacheService.get(cacheKey);
-      if (cachedResult) return cachedResult;
+      if (cachedResult) {
+        if (!(typeof cleanedQuery === "string" && cleanedQuery.includes("Error:"))) {
+          return cachedResult;
+        } else {
+          cacheService.set(cacheKey, null)
+        }
+      }
 
       let queryPrompt = `Generate MongoDB pipeline for: "${query}".`
       if (page || size) {
@@ -79,7 +85,7 @@ class MongoFileOpenAIService extends BaseOpenAIService {
 
       const cleanedQuery = this.cleanAndParsePipeline(response?.choices[0]?.message?.content);
 
-      if (!(typeof cleanedQuery === "String" && cleanedQuery.includes("Error:"))) {
+      if (!(typeof cleanedQuery === "string" && cleanedQuery.includes("Error:"))) {
         if (page && size) {
           cleanedQuery.push({
             $skip: (page - 1) * size

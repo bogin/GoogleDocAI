@@ -268,7 +268,7 @@ class FilesOpenAIService extends BaseOpenAIService {
         ?.replace(/\s+/g, ' ')
         ?.trim();
 
-      if (!(typeof cleanedQuery === "String" && cleanedQuery.includes("Error:"))) {
+      if (!(typeof cleanedQuery === "string" && cleanedQuery.includes("Error:"))) {
         await cacheService.set(cacheKey, cleanedQuery);
       } else {
         throw new Error(cleanedQuery)

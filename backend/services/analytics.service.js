@@ -15,8 +15,12 @@ class AnalyticsService {
             const result = await this.mergeMetatadataAndContentFiles(contentRelatedResults, metadataRelatedResult);
             return {
                 success: true,
-                query: query,
-                result
+                query,
+                result: [
+                    {['Files found that has relations: ']: result},
+                    {['Big metadata data search results']: metadataRelatedResult},
+                    {['Content related results']: contentRelatedResults}
+                ]
             };
 
         } catch (error) {

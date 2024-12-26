@@ -35,8 +35,8 @@ const iconMap = {
   chevronLeft: '◀️',
   chevronRight: '▶️',
   view: '👁️',
-  expendOpen: '▶',
-  expendClosed: '▼',
+  expendClosed: '▶',
+  expendOpen: '▼',
   folder: '📁',
 }
 </script>

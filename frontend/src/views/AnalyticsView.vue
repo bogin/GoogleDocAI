@@ -27,7 +27,6 @@
         <p class="results-stats">
           Found {{ totalItems }} results ({{ queryTime }}ms)
         </p>
-
         <AppInput
           type="text"
           name="searchResults"
@@ -58,21 +57,15 @@
             <div v-show="expandedItems[index]" class="result-details">
               <div v-for="(value, key) in item" :key="key" class="detail-row">
                 <span class="detail-key">{{ formatKey(`${key}`) }}:</span>
-                <span class="detail-value">{{ formatValue(value) }}</span>
+                <AppDeepItem
+                  :value="value ?? '-'"
+                  :searchTerm="searchInResults"
+                  :level="0"
+                />
               </div>
             </div>
           </div>
         </template>
-        <div v-else class="single-result">
-          <div
-            v-for="(value, key) in formattedResults"
-            :key="key"
-            class="detail-row"
-          >
-            <span class="detail-key">{{ formatKey(`${key}`) }}:</span>
-            <span class="detail-value">{{ formatValue(value) }}</span>
-          </div>
-        </div>
       </div>
     </div>
   </div>
@@ -85,10 +78,11 @@ import TextSearchFilter from '../components/filters/TextFilter.vue'
 import type { FormattedResult } from '@/types/analytics'
 import AppInput from '@/components/AppInput.vue'
 import AppIcon from '@/components/AppIcon.vue'
+import AppDeepItem from '@/components/AppDeepItem.vue'
 
 export default defineComponent({
   name: 'AnalyticsView',
-  components: { TextSearchFilter, AppInput, AppIcon },
+  components: { TextSearchFilter, AppInput, AppIcon, AppDeepItem },
 
   setup() {
     const store = useStore()
@@ -111,9 +105,28 @@ export default defineComponent({
       }
 
       const searchTerm = searchInResults.value.toLowerCase()
-      return formattedResults.value.filter((item) =>
-        JSON.stringify(item).toLowerCase().includes(searchTerm)
-      )
+
+      const filterChildren = (item) => {
+        console.log('item', item)
+        if (Array.isArray(item.children)) {
+          item.children = item.children.filter((child) => {
+            return (
+              JSON.stringify(child).toLowerCase().includes(searchTerm) ||
+              filterChildren(child)
+            )
+          })
+        }
+
+        return (
+          JSON.stringify(item).toLowerCase().includes(searchTerm) ||
+          (item.children && item.children.length > 0)
+        )
+      }
+      return formattedResults.value
+        .filter((item) =>
+          JSON.stringify(item).toLowerCase().includes(searchTerm)
+        )
+        .filter(filterChildren)
     })
 
     const handleSearch = async (query: string): Promise<void> => {
@@ -322,6 +335,7 @@ export default defineComponent({
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
