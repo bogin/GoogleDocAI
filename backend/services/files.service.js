@@ -40,28 +40,18 @@ class FilesService {
   }
 
   getInCamalCase(file) {
-    const toCamelCase = (str) => {
-      return str.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
-    };
+    const result = {};
 
-    const convertToCamelCase = (obj) => {
-      if (Array.isArray(obj)) {
-        return obj.map(item => convertToCamelCase(item));
-      }
+    for (const [key, value] of Object.entries(file)) {
+      const transformedKey = key.startsWith('_')
+        ? `${key.slice(1).replace(/_([a-z])/g, (_, char) => char.toUpperCase())}`
+        : key.replace(/_([a-z])/g, (_, char) => char.toUpperCase());
 
-      if (obj && typeof obj === 'object') {
-        return Object.keys(obj).reduce((result, key) => {
-          const camelKey = toCamelCase(key);
-          const value = obj[key];
-          result[camelKey] = convertToCamelCase(value);
-          return result;
-        }, {});
-      }
+      result[transformedKey] = value;
+    }
 
-      return obj;
-    };
+    return result;
 
-    return convertToCamelCase(file);
   }
 
   processFilePermissions(files) {

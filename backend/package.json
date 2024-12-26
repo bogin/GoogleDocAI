@@ -16,6 +16,9 @@
     "db:migrate:undo:all": "sequelize-cli db:migrate:undo:all",
     "db:seed": "sequelize-cli db:seed:all",
     "db:reset": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate",
+    "db:reset:postgres": "sequelize-cli db:migrate:undo:all && sequelize-cli db:migrate",
+    "db:reset:mongo": "node scripts/resetMongo.js",
+    "db:reset:all": "npm run db:reset:postgres && npm run db:reset:mongo",
     "setup:db": "node scripts/setup-db.js",
     "dev:all": "concurrently \"npm run dev\" \"npm run queue_dev\""
   },
@@ -34,6 +37,7 @@
     "ioredis": "^5.4.2",
     "lodash": "^4.17.21",
     "mongodb": "^6.12.0",
+    "mongoose": "^8.9.2",
     "mysql2": "^3.11.5",
     "node-cache": "^5.1.2",
     "openai": "^4.76.3",

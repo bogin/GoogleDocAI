@@ -2,27 +2,12 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const routes = require('./routes/index');
-const validateDatabaseConnection = require('./services/postgres.db.service');
+const validateDatabaseConnection = require('./db/postgres.db.connection');
 const googleService = require('./services/google.service');
 const { redisClient } = require('./config/redis.config');
 const syncQueue = require('./services/queue');
 const etlService = require('./services/etl.service');
-
-const app = express();
-const port = process.env.PORT || 3000;
-
-app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:8080'
-}));
-app.use('/', routes);
-
-const errorHandler = (err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ message: err.message });
-};
-app.use(errorHandler);
-
+const { connectToMongoDB } = require('./db/mongo.connection');
 
 async function validateRedisConnection() {
   try {
@@ -33,8 +18,13 @@ async function validateRedisConnection() {
     return false;
   }
 }
+
 async function startServer() {
-  const app = express();
+  const isMongoDbConnected = await connectToMongoDB();
+  if (!isMongoDbConnected) {
+    throw new Error('Mongo Database connection failed');
+  }
+  console.log('Mongo Database connected successfully');
 
   const isDbConnected = await validateDatabaseConnection();
   if (!isDbConnected) throw new Error('Database connection failed');
@@ -42,9 +32,24 @@ async function startServer() {
   const isRedisConnected = await validateRedisConnection();
   if (!isRedisConnected) throw new Error('Redis connection failed');
 
+  const app = express();
+
+
+  const port = process.env.PORT || 3000;
+
+
   app.use(express.json());
-  app.use(cors({ origin: 'http://localhost:8080' }));
+  app.use(cors({
+    origin: 'http://localhost:8080'
+  }));
   app.use('/', routes);
+
+  const errorHandler = (err, req, res, next) => {
+    console.error(err.stack);
+    res.status(500).json({ message: err.message });
+  };
+
+  app.use(errorHandler);
 
   const server = app.listen(port, () => {
     console.log(`API Server running on port ${port}`);
@@ -57,8 +62,8 @@ async function startServer() {
   ]);
 
 
-  googleService.on('authenticated', (auth) => {
-    etlService.setAuth(auth);
+  googleService.on('authenticated', async (auth) => {
+    await etlService.setAuth(auth);
     syncQueue.setInitialized(true);
   });
 

@@ -101,6 +101,7 @@ class ETLService extends BaseService {
                     fields: 'nextPageToken, files(id, name, mimeType, modifiedTime, owners, size, webViewLink, iconLink, shared, lastModifyingUser, permissions, version, capabilities, trashed)'
                 });
 
+
                 if (response.data.files.length > 0) {
                     await syncQueue.addToQueue({
                         type: 'BULK_SYNC',
@@ -126,7 +127,7 @@ class ETLService extends BaseService {
 
         if (latestSuccessfulSync) {
             return this.drive.files.list({
-                q: `modifiedTime > '${latestSuccessfulSync.dataValues?.modifiedTime?.toISOString()}' and mimeType = 'application/vnd.google-apps.document'`,
+                q: `modifiedTime > '${latestSuccessfulSync.dataValues?.modified_time?.toISOString()}' and mimeType = 'application/vnd.google-apps.document'`,
                 fields: 'files(id, modifiedTime)'
             });
         }

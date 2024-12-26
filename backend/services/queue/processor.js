@@ -1,13 +1,27 @@
 const filesRepository = require('../../repo/files.repository');
 const userRepository = require('../../repo/user.repository');
 const fileOwnerRepository = require('../../repo/fileOwner.repository');
+const googleService = require('../google.service');
+const mongoFileRepository = require('../../repo/file.mongo.repository');
 
 class FileProcessorService {
+
+    processFileContent = async (fileId) => {
+        try {
+            const response = await googleService.getFileContent(fileId)
+            const upserted = await mongoFileRepository.upsertFileFromResponse(response);
+            return upserted;
+        } catch (error) {
+            console.error('Error getting file content:', error);
+            throw error;
+        }
+    }
+
     async processFiles(task) {
         const { files } = task;
         const results = { success: 0, failed: 0, errors: [] };
         const updatedUsers = new Set();
-
+        const processContentPromises = [];
         for (const fileData of files) {
             let item;
             try {
@@ -20,7 +34,7 @@ class FileProcessorService {
                 item = sanitizedData;
                 const [file] = await filesRepository.upsert(sanitizedData);
                 await this.processFilePermissions(file, fileData, updatedUsers);
-
+                processContentPromises.push(this.processFileContent(file.id))
                 results.success++;
             } catch (error) {
                 results.failed++;
@@ -33,6 +47,7 @@ class FileProcessorService {
         }
 
         await this.updateUserStats(updatedUsers);
+        await Promise.all(processContentPromises);
         return results;
     }
 

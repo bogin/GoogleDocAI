@@ -77,7 +77,7 @@ class AuthService {
                 // Ignore if file doesn't exist
             }
 
-            this.etlService.setAuth(null);
+            await this.etlService.setAuth(null);
             this.smartQueue.setInitialized(false);
 
             return {

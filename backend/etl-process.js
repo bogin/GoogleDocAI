@@ -1,10 +1,11 @@
 require('dotenv').config();
-const validateDatabaseConnection = require('./services/postgres.db.service');
+const validateDatabaseConnection = require('./db/postgres.db.connection');
 const googleService = require('./services/google.service');
 const etlService = require('./services/etl.service');
 const syncQueue = require('./services/queue');
 const fileProcessor = require('./services/queue/processor');
 const EventEmitter = require('events');
+const { connectToMongoDB } = require('./db/mongo.connection');
 
 class BackgroundService extends EventEmitter {
     constructor() {
@@ -33,11 +34,17 @@ class BackgroundService extends EventEmitter {
 
     async start() {
         try {
-            const isDbConnected = await validateDatabaseConnection();
-            if (!isDbConnected) {
-                throw new Error('Database connection failed');
+            const isMongoDbConnected = await connectToMongoDB();
+            if (!isMongoDbConnected) {
+                throw new Error('Mongo Database connection failed');
             }
-            console.log('Database connected successfully');
+            console.log('Mongo Database connected successfully');
+
+            const isPostgresDbConnected = await validateDatabaseConnection();
+            if (!isPostgresDbConnected) {
+                throw new Error('Postgres Database connection failed');
+            }
+            console.log('Postgres Database connected successfully');
 
             syncQueue.setProcessor(fileProcessor);
 
@@ -50,7 +57,7 @@ class BackgroundService extends EventEmitter {
 
             googleService.on('authenticated', async (auth) => {
                 console.log('Received authentication update');
-                etlService.setAuth(auth);
+                await etlService.setAuth(auth);
                 syncQueue.setInitialized(true);
                 await this.startProcessing();
                 console.log('Services activated with auth');
@@ -59,7 +66,7 @@ class BackgroundService extends EventEmitter {
             const setupNeeded = await googleService.requiresSetup();
             if (!setupNeeded) {
                 console.log('Using existing Google authentication');
-                etlService.setAuth(googleService.getAuth());
+                await etlService.setAuth(googleService.getAuth());
                 syncQueue.setInitialized(true);
                 await this.startProcessing();
                 console.log('Services fully initialized with existing auth');
@@ -80,7 +87,7 @@ class BackgroundService extends EventEmitter {
             await etlService.startPeriodicSync();
             console.log('ETL processing started');
         } catch (error) {
-            console.error('Error starting processing:', error);
+            console.error('Error starting processing:');
         }
     }
 

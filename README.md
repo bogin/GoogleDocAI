@@ -49,6 +49,8 @@ DB_HOST=localhost
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_PASSWORD=
+
+MONGO_URI=mongodb://localhost:27017/files
 ```
 
 4. Setup the database:
@@ -61,11 +63,11 @@ npm run db:migrate
 # macOS/Linux
 cd backend
 sudo -u postgres npm run setup:db
+npm run db:migrate
 ```
 
 5. Run the application:
 
-**Development mode:**
 ```bash
 # Backend
 cd backend
