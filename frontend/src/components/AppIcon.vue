@@ -34,6 +34,10 @@ const iconMap = {
   search: '🔍',
   chevronLeft: '◀️',
   chevronRight: '▶️',
+  view: '👁️',
+  expendOpen: '▶',
+  expendClosed: '▼',
+  folder: '📁',
 }
 </script>
 

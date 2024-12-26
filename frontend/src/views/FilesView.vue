@@ -10,7 +10,9 @@
 
     <div v-if="error" class="error-container">
       <div class="error-content">
-        <div class="error-icon">⚠️</div>
+        <div class="error-icon">
+          <AppIcon type="warning"></AppIcon>
+        </div>
         <h2>Something went wrong</h2>
         <p>{{ error }}</p>
         <AppButton variant="primary" @click="retryFetch">Try Again</AppButton>
@@ -35,7 +37,9 @@
       </div>
 
       <div v-if="!loading && files.length === 0" class="empty-state">
-        <span class="icon">📁</span>
+        <span class="icon">
+          <AppIcon type="folder" :large="true"></AppIcon>
+        </span>
         <p>No files found</p>
         <p class="subtitle" v-if="hasActiveFilters">
           Try clearing your filters
@@ -51,12 +55,14 @@ import { useStore } from 'vuex'
 import FilesTable from '../components/FilesTable/FilesTable.vue'
 import AppButton from '../components/AppButton.vue'
 import FiltersContainer from '../components/filters/FiltersContainer.vue'
+import AppIcon from '@/components/AppIcon.vue'
 
 export default defineComponent({
   name: 'FilesView',
   components: {
     AppButton,
     FilesTable,
+    AppIcon,
     FiltersContainer,
   },
 

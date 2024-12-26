@@ -37,7 +37,6 @@
         />
       </div>
 
-      <!-- Results Display -->
       <div class="results-content">
         <template v-if="Array.isArray(filteredResults)">
           <div
@@ -47,9 +46,13 @@
             :class="{ highlight: isHighlighted(item) }"
           >
             <div class="result-header" @click="toggleExpand(index)">
-              <span class="expand-icon">{{
-                expandedItems[index] ? '▼' : '▶'
-              }}</span>
+              <span class="expand-icon">
+                <AppIcon
+                  type="expendOpen"
+                  v-if="expandedItems[index]"
+                ></AppIcon>
+                <AppIcon type="expendClosed" v-else></AppIcon>
+              </span>
               <div class="result-title">{{ formatResultTitle(item) }}</div>
             </div>
             <div v-show="expandedItems[index]" class="result-details">
@@ -81,10 +84,11 @@ import { useStore } from 'vuex'
 import TextSearchFilter from '../components/filters/TextFilter.vue'
 import type { FormattedResult } from '@/types/analytics'
 import AppInput from '@/components/AppInput.vue'
+import AppIcon from '@/components/AppIcon.vue'
 
 export default defineComponent({
   name: 'AnalyticsView',
-  components: { TextSearchFilter, AppInput },
+  components: { TextSearchFilter, AppInput, AppIcon },
 
   setup() {
     const store = useStore()
