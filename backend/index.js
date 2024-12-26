@@ -4,20 +4,9 @@ const cors = require('cors');
 const routes = require('./routes/index');
 const validateDatabaseConnection = require('./db/postgres.db.connection');
 const googleService = require('./services/google.service');
-const { redisClient } = require('./config/redis.config');
 const syncQueue = require('./services/queue');
 const etlService = require('./services/etl.service');
 const { connectToMongoDB } = require('./db/mongo.connection');
-
-async function validateRedisConnection() {
-  try {
-    await redisClient.ping();
-    return true;
-  } catch (error) {
-    console.error('Redis connection error:');
-    return false;
-  }
-}
 
 async function startServer() {
   const isMongoDbConnected = await connectToMongoDB();
@@ -29,14 +18,9 @@ async function startServer() {
   const isDbConnected = await validateDatabaseConnection();
   if (!isDbConnected) throw new Error('Database connection failed');
 
-  const isRedisConnected = await validateRedisConnection();
-  if (!isRedisConnected) throw new Error('Redis connection failed');
-
   const app = express();
 
-
   const port = process.env.PORT || 3000;
-
 
   app.use(express.json());
   app.use(cors({
@@ -77,7 +61,6 @@ process.on('SIGTERM', () => {
 
 process.on('SIGTERM', async () => {
   console.log('SIGTERM received. Shutting down gracefully...');
-  await redisClient.quit();
   process.exit(0);
 });
 

@@ -9,7 +9,6 @@ Before you begin, ensure you have installed:
 - [Node.js](https://nodejs.org/en/) (v16 or higher)
 - [PostgreSQL](https://www.postgresql.org/download/)
 - [MongoDB](https://www.mongodb.com/try/download/community)
-- [Redis Docker](https://hub.docker.com/_/redis)
 
 ## Getting Started
 
@@ -44,10 +43,6 @@ DB_PASSWORD=postgres
 DB_NAME=unframe_dev
 DB_PORT=5432
 DB_HOST=localhost
-
-REDIS_HOST=localhost
-REDIS_PORT=6379
-REDIS_PASSWORD=
 
 MONGO_URI=mongodb://localhost:27017/files
 ```
@@ -155,9 +150,7 @@ Before using the application, you must:
 - Dual database architecture:
   * PostgreSQL for metadata (with Sequelize ORM)
   * MongoDB for file content
-- Redis for multi-level caching:
-  * In-memory cache
-  * Distributed cache
+- In-memory cache
 - Event-driven ETL pipeline
 - Multiple OpenAI integrations
 - Google Drive API integration
