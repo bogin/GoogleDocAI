@@ -21,45 +21,45 @@ class MongoFileRepository {
 
     getUniqueStrings(obj) {
         const values = [];
-      
-        // Recursive function to collect all values
+
         function collectValues(item) {
-          if (item && typeof item === 'object') {
-            // If it's an object or array, iterate over its entries
-            Object.values(item).forEach(collectValues);
-          } else {
-            // Convert the value to string and add it to the list
-            values.push(`${item}`);
-          }
+            if (item && typeof item === 'object') {
+                Object.values(item).forEach(collectValues);
+            } else {
+                values.push(`${item}`);
+            }
         }
-      
-        // Start collecting values from the root object
+
         collectValues(obj);
-      
-        // Return unique values
+
         return [...new Set(values)];
-      }
+    }
+
     async upsertFileFromResponse(response, file) {
         try {
-            const fileId = response.request.responseURL.split('/')[6];
             const content = response.data;
-            const mimeType = response.headers['content-type'];
-            const strings = this.getUniqueStrings(file.toJSON());
-            const metadataAsText = `${JSON.stringify(Object.values(strings))}`
-            return await FileContent.findOneAndUpdate(
-                { fileId },
-                {
-                    content: `content: ${content}, metadataAsText: ${metadataAsText}`,
-                    mimeType,
-                    lastSync: new Date(),
-                    metadataAsText
-                },
-                { upsert: true, new: true }
-            );
+            return this.upsertWithMetadata(content, file);
         } catch (error) {
             console.error('Error upserting file content from response:');
             throw error;
         }
+    }
+
+    async upsertWithMetadata(content, file) {
+        const fileJson = file.toJSON()
+        const strings = this.getUniqueStrings(fileJson);
+        const metadataAsText = `${JSON.stringify(Object.values(strings))}`
+
+        return FileContent.findOneAndUpdate(
+            { fileId: file.id },
+            {
+                content: `content: ${content}, metadataAsText: ${metadataAsText}`,
+                mimeType: file.mimeType,
+                lastSync: new Date(),
+                metadataAsText
+            },
+            { upsert: true, new: true }
+        );
     }
 
     async findByFileId(fileId) {

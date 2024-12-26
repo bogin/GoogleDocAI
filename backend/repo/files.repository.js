@@ -1,14 +1,23 @@
+const { includes } = require('lodash');
 const { FileOwner, User, File, sequelize } = require('../models');
 
 const fileOwnerRepository = require('./fileOwner.repository');
 
 class FilesRepository {
 
-    static DEFAULT_USER_INCLUDE = {
-        model: User,
-        as: 'user',
-        attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize']
+    DEFAULT_OWNER_INCLUDE = {
+        model: FileOwner,
+        as: 'fileOwners',
+        include: [{
+            model: User,
+            as: 'User',
+            attributes: ['id', 'email', 'displayName', 'photoLink', 'totalFiles', 'totalSize']
+        }]
     };
+
+    getDefaultInclude() {
+        return this.DEFAULT_OWNER_INCLUDE;
+    }
 
     async findAll(queryConfig) {
         try {
@@ -28,7 +37,7 @@ class FilesRepository {
         }
     }
 
-    async findById(fileId, include = [FilesRepository.DEFAULT_USER_INCLUDE]) {
+    async findById(fileId, include = [this.DEFAULT_OWNER_INCLUDE]) {
         const file = await File.findByPk(fileId, {
             include
         });
@@ -114,7 +123,7 @@ class FilesRepository {
         for (const user of users) {
             const hasRemainingFiles = await fileOwnerRepository.userHasFiles(user.id, transaction);
             if (!hasRemainingFiles) {
-                await user.destroy({ transaction });
+                await user.destroy({transaction});
             }
         }
     }

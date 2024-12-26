@@ -3,6 +3,8 @@ const filesRepository = require('../repo/files.repository');
 const openaiService = require('./openai/openai-files.service');
 const { sequelize } = require('../models');
 const { uniqBy } = require('lodash');
+const googleService = require('./google.service');
+const mongoFileRepository = require('../repo/file.mongo.repository');
 
 const PAGINATION_DEFAULTS = {
   page: 1,
@@ -99,7 +101,8 @@ class FilesService {
       },
       limit: size,
       offset: (page - 1) * size,
-      order: [['modifiedTime', 'DESC']]
+      order: [['modifiedTime', 'DESC']],
+      include: filesRepository.getDefaultInclude()
     };
   }
 
@@ -122,15 +125,15 @@ class FilesService {
     return await filesRepository.findById(fileId);
   }
 
-  async createFile(fileData) {
-    return await filesRepository.create(fileData);
-  }
-
   async updateFileById(fileId, metadata) {
-    return await filesRepository.update(fileId, metadata);
+    const res = await filesRepository.update(fileId, metadata);
+    const response = await googleService.getFileContent(fileId)
+    await mongoFileRepository.upsertWithMetadata(response.data, res);
+    return res;
   }
 
   async deleteFileById(fileId) {
+    await mongoFileRepository.deleteFile(fileId);
     return await filesRepository.delete(fileId);
   }
 }
