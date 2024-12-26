@@ -122,7 +122,6 @@ const onBlur = (event: FocusEvent) => {
 .input-wrapper {
   display: flex;
   flex-direction: column;
-  margin-bottom: 1rem;
   position: relative;
 }
 

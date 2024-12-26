@@ -23,6 +23,7 @@ class ETLService extends BaseService {
     setAuth(auth) {
         if (!auth) return;
         this.drive = google.drive({ version: 'v3', auth });
+        this.markInitialized();
         this.startPeriodicSync().catch(console.error);
     }
 

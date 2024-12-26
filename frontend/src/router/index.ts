@@ -5,6 +5,10 @@ import SystemSettingsView from '../views/SystemSettings.vue'
 
 const routes: Array<RouteRecordRaw> = [
   {
+    path: '/',
+    redirect: '/settings',
+  },
+  {
     path: '/files',
     name: 'files',
     component: FilesView,

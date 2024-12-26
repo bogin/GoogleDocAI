@@ -26,6 +26,8 @@ class FilesService {
 
     let count, rows;
     if (options?.filters?.query) {
+      
+      queryConfig.include = filesRepository.getDefaultInclude()
       const string = await this.getQueryStringWithAI(options.filters.query, page, size, queryConfig);
 
       const [results, metadata] = await sequelize.query(string);
@@ -89,7 +91,7 @@ class FilesService {
         pageSize,
         totalItems: totalCount,
         totalPages: Math.ceil(totalCount / pageSize),
-        hasNextPage: currentPage * pageSize < totalCount,
+        hasNextPage: (currentPage * pageSize < totalCount) && files.length === pageSize,
       }
     };
   }
@@ -102,7 +104,6 @@ class FilesService {
       limit: size,
       offset: (page - 1) * size,
       order: [['modifiedTime', 'DESC']],
-      include: filesRepository.getDefaultInclude()
     };
   }
 

@@ -89,7 +89,7 @@ const actions = {
 
     try {
       const { data } = await axios.post<SystemSetting>(
-        `/system-settings/`,
+        `/system-settings/${payload.key}`,
         payload
       )
       commit('SET_SETTINGS', [...(state.settings || []), data])

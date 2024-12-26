@@ -36,7 +36,7 @@ router.get('/:key',
   systemSettingsController.get
 );
 
-router.post('/',
+router.post('/:key',
   [...validateSettingKey, ...validateSettingValue],
   handleValidationErrors,
   systemSettingsController.create

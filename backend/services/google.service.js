@@ -67,8 +67,9 @@ class GoogleService extends BaseService {
                 this.emit('tokensUpdated', tokens);
             });
 
-            await this.verifyAndInitializeAuth();
-
+            const verified = await this.verifyAndInitializeAuth();
+            // if (!verified) return verified;
+            
             this.markInitialized();
             return true;
         } catch (error) {
@@ -133,7 +134,7 @@ class GoogleService extends BaseService {
                 return false;
             }
 
-            const expiryDate = new Date(tokens.expiry_date);
+            const expiryDate =  new Date(tokens.expiry_date);
             const now = new Date();
 
             if (now >= expiryDate && tokens.refresh_token) {
@@ -167,8 +168,6 @@ class GoogleService extends BaseService {
 
     async setCredentials(code) {
         try {
-            await this.waitForInit();
-
             const { tokens } = await this.auth.getToken(code);
 
             const existingTokens = await this.loadTokensFromSettings();
@@ -194,10 +193,22 @@ class GoogleService extends BaseService {
         }
     }
 
-
-    getAuthUrl() {
+ 
+    async getAuthUrl() {
         if (!this.auth) {
-            throw new Error('Google service not configured yet - waiting for settings');
+            const settings = await systemSettingsService.get('google');
+            if (!settings?.value) {
+                throw new Error('Google service not configured yet - waiting for settings - this my take up to a minte');
+            }
+        
+            const { clientId, clientSecret, redirectUri } = settings.value;
+            // Create a temporary auth client just for URL generation
+            const tempAuth = new google.auth.OAuth2(
+                clientId,
+                clientSecret,
+                redirectUri || "http://localhost:3000/auth/google/callback"
+            );
+            this.auth = tempAuth;
         }
 
         return this.auth.generateAuthUrl({

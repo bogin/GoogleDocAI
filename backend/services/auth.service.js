@@ -7,11 +7,10 @@ class AuthService {
         this.googleService = googleService;
         this.etlService = etlService;
         this.smartQueue = smartQueue;
-    }
+    } 
 
     async getGoogleAuthUrl() {
         try {
-            await this.googleService.waitForInit();
             return this.googleService.getAuthUrl();
         } catch (error) {
             console.error('Error getting Google auth URL:');

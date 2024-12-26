@@ -32,8 +32,8 @@
           <AppInput
             type="checkbox"
             :name="`column-${column.key}`"
-            :checked="column.visible"
-            @change="toggleColumn(column)"
+            :modelValue="column.visible"
+            @update:modelValue="(value) => toggleColumn(column, value)"
             :disabled="column.key === 'name' || column.key === 'actions'"
           />
           <span>{{ column.label }}</span>
@@ -70,10 +70,10 @@ export default defineComponent({
     const dropdown = ref<HTMLElement | null>(null)
     const dropdownStyle = ref({})
 
-    const toggleColumn = (column: Column) => {
+    const toggleColumn = (column: Column, value: boolean) => {
       const updatedColumns = props.columns.map((col) => {
         if (col.key === column.key) {
-          return { ...col, visible: !col.visible }
+          return { ...col, visible: value }
         }
         return col
       })
