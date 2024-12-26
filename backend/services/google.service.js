@@ -10,7 +10,6 @@ class GoogleService extends BaseService {
         this.auth = null;
         this.drive = null;
         this.isAuthenticated = false;
-        this.tokensPath = path.join(__dirname, '../tokens.json');
         this.configurationPromise = null;
         this.configResolver = null;
     }
@@ -56,7 +55,7 @@ class GoogleService extends BaseService {
 
             this.auth.on('tokens', async (tokens) => {
                 if (tokens.refresh_token || tokens.access_token) {
-                    const currentTokens = await this.loadTokensFromFile();
+                    const currentTokens = await this.loadTokensFromSettings();
                     const mergedTokens = {
                         ...currentTokens,
                         ...tokens,
@@ -64,7 +63,7 @@ class GoogleService extends BaseService {
                         refresh_token: tokens.refresh_token || currentTokens?.refresh_token,
                         expiry_date: tokens.expiry_date || currentTokens?.expiry_date
                     };
-                    await this.saveTokens(mergedTokens);
+                    await this.saveTokensToSettings(mergedTokens);
                 }
                 this.emit('tokensUpdated', tokens);
             });
@@ -92,7 +91,7 @@ class GoogleService extends BaseService {
                     return true;
                 } catch (apiError) {
                     console.log('Stored credentials are invalid:', apiError.message);
-                    await fs.unlink(this.tokensPath).catch(() => { });
+                    await systemSettingsService.update('google_tokens', null);
                     this.isAuthenticated = false;
                     this.emit('authenticationFailed', apiError);
                     this.emit('authenticationRequired');
@@ -110,18 +109,29 @@ class GoogleService extends BaseService {
         }
     }
 
-    async loadTokensFromFile() {
+    async loadTokensFromSettings() {
         try {
-            const tokensData = await fs.readFile(this.tokensPath, 'utf8');
-            return JSON.parse(tokensData);
+            const setting = await systemSettingsService.get('google_tokens');
+            return setting?.value || null;
         } catch (error) {
+            console.error('Error loading tokens from settings:', error);
             return null;
+        }
+    }
+
+    async saveTokensToSettings(tokens) {
+        try {
+            await systemSettingsService.update('google_tokens', tokens);
+            console.log('Tokens saved to settings successfully');
+        } catch (error) {
+            console.error('Error saving tokens to settings:', error);
+            throw error;
         }
     }
 
     async loadSavedTokens() {
         try {
-            const tokens = await this.loadTokensFromFile();
+            const tokens = await this.loadTokensFromSettings();
             if (!tokens) {
                 console.log('No saved tokens found');
                 this.isAuthenticated = false;
@@ -139,7 +149,7 @@ class GoogleService extends BaseService {
                         ...refreshedTokens.tokens,
                         refresh_token: tokens.refresh_token
                     };
-                    await this.saveTokens(mergedTokens);
+                    await this.saveTokensToSettings(mergedTokens);
                     this.auth.setCredentials(mergedTokens);
                     this.isAuthenticated = true;
                     this.emit('authenticated', this.auth);
@@ -156,7 +166,7 @@ class GoogleService extends BaseService {
                 return true;
             }
         } catch (error) {
-            console.log('Error loading tokens:', error);
+            console.log('Error loading saved tokens:', error);
             this.isAuthenticated = false;
             return false;
         }
@@ -165,9 +175,11 @@ class GoogleService extends BaseService {
     async setCredentials(code) {
         try {
             await this.waitForInit();
+
             const { tokens } = await this.auth.getToken(code);
 
-            const existingTokens = await this.loadTokensFromFile();
+            const existingTokens = await this.loadTokensFromSettings();
+
             const mergedTokens = {
                 ...existingTokens,
                 ...tokens,
@@ -175,9 +187,12 @@ class GoogleService extends BaseService {
             };
 
             this.auth.setCredentials(mergedTokens);
-            await this.saveTokens(mergedTokens);
+
+            await this.saveTokensToSettings(mergedTokens);
+
             this.isAuthenticated = true;
             this.emit('authenticated', this.auth);
+
             return mergedTokens;
         } catch (error) {
             console.error('Error setting credentials:', error);
@@ -186,15 +201,6 @@ class GoogleService extends BaseService {
         }
     }
 
-    async saveTokens(tokens) {
-        try {
-            await fs.writeFile(this.tokensPath, JSON.stringify(tokens, null, 2));
-            console.log('Tokens saved successfully');
-        } catch (error) {
-            console.error('Error saving tokens:', error);
-            throw error;
-        }
-    }
 
     getAuthUrl() {
         if (!this.auth) {
@@ -205,10 +211,23 @@ class GoogleService extends BaseService {
             access_type: 'offline',
             prompt: 'consent',
             scope: [
-                'https://www.googleapis.com/auth/drive.file',
-                'https://www.googleapis.com/auth/drive.metadata.readonly'
+                'https://www.googleapis.com/auth/drive.file', 'https://www.googleapis.com/auth/drive'
             ]
         });
+    }
+
+    async getFileContent(fileId) {
+        try {
+            const response = await this.drive.files.export({
+                fileId: fileId,
+                mimeType: 'text/plain'
+            });
+
+            return response;
+        } catch (error) {
+            console.error('Error getting file content:', error);
+            throw error;
+        }
     }
 
     async requiresSetup() {

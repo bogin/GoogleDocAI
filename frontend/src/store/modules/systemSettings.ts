@@ -9,8 +9,8 @@ import {
 } from '../../types/systemSettings'
 
 interface UpdateSettingPayload {
-  key: any
-  value: OpenAISettings | GoogleSettings
+  key: string
+  value: Record<string, string>
 }
 
 interface BatchUpdatePayload {
@@ -113,7 +113,6 @@ const actions = {
     commit('SET_ERROR', null)
 
     try {
-      console.log(`${payload}`, payload)
       const { data } = await axios.put<SystemSetting>(
         `/system-settings/${payload.key}`,
         payload.value
@@ -123,7 +122,7 @@ const actions = {
     } catch (error) {
       const errorMessage =
         error instanceof AxiosError
-          ? error.response?.data?.error || 'Failed to update setting'
+          ? error.response?.data?.error || 'Failed to update settings'
           : 'An unexpected error occurred'
       commit('SET_ERROR', errorMessage)
       throw error
@@ -166,10 +165,7 @@ const getters = {
     },
 
   getOpenAISettings: (state: SystemSettingsState): OpenAISettings | null => {
-    return (
-      (state.settings?.find((s) => s.key === 'openai')
-        ?.value as OpenAISettings) || null
-    )
+    return state.settings?.find((s) => s.key === 'openai')?.value || null
   },
 
   getGoogleSettings: (state: SystemSettingsState): GoogleSettings | null => {

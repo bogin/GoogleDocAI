@@ -209,7 +209,7 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
       "Error: [Specific error message]. [Natural language explanation of the issue]"
   `;
   constructor() {
-    super();
+    super('analyticsKey');
   }
 
   async generateQuery({ query }) {
@@ -217,9 +217,9 @@ class OpenAIAnalyticsService extends BaseOpenAIService {
     try {
       const cacheKey = `${query} `;
       const cachedResult = await cacheService.get(cacheKey);
-      // if (cachedResult) {
-      //   return cachedResult;
-      // }
+      if (cachedResult) {
+        return cachedResult;
+      }
 
       const response = await this.openai.chat.completions.create({
         model: 'gpt-3.5-turbo',

@@ -28,7 +28,6 @@
       <div class="settings-card">
         <div class="card-header">
           <h2>OpenAI Integration</h2>
-
           <AppButton
             @click="showOpenAIForm = true"
             classes="edit-button"
@@ -36,10 +35,16 @@
           ></AppButton>
         </div>
         <div class="card-content">
-          <div class="setting-item">
-            <label>API Key:</label>
+          <h5>One key will work as well</h5>
+
+          <div
+            class="setting-item"
+            v-for="(key, index) in openAIKeys"
+            :key="index"
+          >
+            <label>{{ key.label }}:</label>
             <span class="masked-value">{{
-              maskApiKey(openAISettings?.apiKey)
+              maskString(openAISettings?.[key.name])
             }}</span>
           </div>
           <p class="last-updated">
@@ -127,16 +132,6 @@ export default defineComponent({
     const showOpenAIForm = ref(false)
     const showGoogleForm = ref(false)
 
-    const openAIFormConfig: FormField[] = [
-      {
-        name: 'apiKey',
-        label: 'API Key',
-        type: 'text',
-        required: true,
-        placeholder: 'Enter OpenAI API Key',
-      },
-    ]
-
     const googleFormConfig: FormField[] = [
       {
         name: 'clientId',
@@ -153,6 +148,21 @@ export default defineComponent({
         placeholder: 'Enter Google Client Secret',
       },
     ]
+
+    const openAIKeys = [
+      { name: 'typoKey', label: 'Typo Key' },
+      { name: 'analyticsKey', label: 'Analytics Key' },
+      { name: 'postgresFilesKey', label: 'Postgres Files Key' },
+      { name: 'mongoFilesKey', label: 'Mongo Files Key' },
+    ]
+
+    const openAIFormConfig: FormField[] = openAIKeys.map((key) => ({
+      name: key.name,
+      label: key.label,
+      type: 'text',
+      required: true,
+      placeholder: `Enter ${key.label}`,
+    }))
 
     const handleOpenAIUpdate = async (
       data: Record<string, any>
@@ -256,6 +266,7 @@ export default defineComponent({
       googleFormConfig,
       openAISettings,
       googleSettings,
+      openAIKeys,
       handleOpenAICreate,
       handleGoogleCreate,
       getSettingByKey,

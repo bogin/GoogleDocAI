@@ -228,7 +228,7 @@ class FilesOpenAIService extends BaseOpenAIService {
       ORDER BY f.modified_time DESC;
     `;
   constructor() {
-    super();
+    super('postgresFilesKey');
   }
 
   async generateQuery({ query, page = 1, size = 10, queryConfig }) {

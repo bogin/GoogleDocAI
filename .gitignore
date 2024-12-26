@@ -12,7 +12,6 @@ s
 .DS_Store
 
 backend/.env
-backend/tokens.json
 
 client/node_modules/
 client/npm-debug.log

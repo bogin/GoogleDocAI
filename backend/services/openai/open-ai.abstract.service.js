@@ -3,13 +3,14 @@ const systemSettingsService = require('../system-settings.service');
 const EventEmitter = require('events');
 
 class BaseOpenAIService extends EventEmitter {
-    constructor() {
+    constructor(apiKey = null) {
         super();
         this.openai = null;
         this.systemPrompt = '';
         this.isConfigured = false;
         this.configurationPromise = null;
         this.configResolver = null;
+        this.apiKEY = apiKey;
         this.initialize();
     }
 
@@ -27,22 +28,27 @@ class BaseOpenAIService extends EventEmitter {
 
     async initialize() {
         try {
-            const settings = await systemSettingsService.get('openai');
-            if (!settings || !settings.value?.apiKey) {
-                console.log('Waiting for OpenAI API key to be configured...');
-                return false;
+            const settings = await systemSettingsService.get("openai");
+            if (settings?.value) {
+                const keys = Object.keys(settings.value);
+                const key = settings.value[this.apiKEY] || settings.value[keys[0]];
+
+                this.openai = new OpenAI({
+                    apiKey: key,
+                });
+
+                this.isConfigured = true;
+                if (this.configResolver) {
+                    this.configResolver(true);
+                }
+
+                return true;
             }
 
-            this.openai = new OpenAI({
-                apiKey: settings.value.apiKey,
-            });
+            console.log('Waiting for OpenAI API key to be configured...');
+            return false;
 
-            this.isConfigured = true;
-            if (this.configResolver) {
-                this.configResolver(true);
-            }
 
-            return true;
         } catch (error) {
             console.error('Failed to initialize OpenAI:', error);
             return false;

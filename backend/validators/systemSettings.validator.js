@@ -14,16 +14,6 @@ exports.validateSettingValue = [
     body()
         .notEmpty()
         .withMessage('Value is required')
-        .custom((value) => {
-            try {
-                if (typeof value === 'string') {
-                    JSON.parse(value);
-                }
-                return true;
-            } catch (e) {
-                throw new Error('Value must be valid JSON');
-            }
-        })
 ];
 
 exports.validateBatchSettings = [

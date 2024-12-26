@@ -9,7 +9,7 @@ class SystemSettingsRepository {
         return SystemSetting.findByPk(key);
     }
 
-    async upsert({key, value}) {
+    async upsert({ key, value }) {
         const [setting] = await SystemSetting.upsert({
             key,
             value
@@ -25,14 +25,16 @@ class SystemSettingsRepository {
     }
 
     async updateBatch(settings, transaction) {
-        return Promise.all(
-            settings.map(({ key, value }) =>
-                SystemSetting.upsert(
-                    { key, value },
-                    { transaction }
-                )
-            )
-        );
+        const results = [];
+        for (const { key, value } of settings) {
+            try {
+                const [setting] = await SystemSetting.upsert({ key, value }, { transaction });
+                results.push(setting);
+            } catch (error) {
+                console.error(`Failed to upsert setting with key ${key}:`, error);
+            }
+        }
+        return results;
     }
 
     async findOne({ queryConfig }) {

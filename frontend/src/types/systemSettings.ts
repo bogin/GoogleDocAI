@@ -11,7 +11,10 @@ export interface SystemSettingsState {
 }
 
 export interface OpenAISettings {
-  apiKey: string
+  typoKey: string
+  analyticsKey: string
+  mongoFilesKey: string
+  postgresFilesKey: string
 }
 
 export interface GoogleSettings {
