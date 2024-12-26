@@ -19,20 +19,40 @@ class MongoFileRepository {
         }
     }
 
-    async upsertFileFromResponse(response) {
+    getUniqueStrings(obj) {
+        const values = [];
+      
+        // Recursive function to collect all values
+        function collectValues(item) {
+          if (item && typeof item === 'object') {
+            // If it's an object or array, iterate over its entries
+            Object.values(item).forEach(collectValues);
+          } else {
+            // Convert the value to string and add it to the list
+            values.push(`${item}`);
+          }
+        }
+      
+        // Start collecting values from the root object
+        collectValues(obj);
+      
+        // Return unique values
+        return [...new Set(values)];
+      }
+    async upsertFileFromResponse(response, file) {
         try {
-            // Extracting necessary details from the response
             const fileId = response.request.responseURL.split('/')[6];
             const content = response.data;
             const mimeType = response.headers['content-type'];
-
-            // Upsert operation
+            const strings = this.getUniqueStrings(file.toJSON());
+            const metadataAsText = `${JSON.stringify(Object.values(strings))}`
             return await FileContent.findOneAndUpdate(
                 { fileId },
                 {
-                    content,
+                    content: `content: ${content}, metadataAsText: ${metadataAsText}`,
                     mimeType,
                     lastSync: new Date(),
+                    metadataAsText
                 },
                 { upsert: true, new: true }
             );
