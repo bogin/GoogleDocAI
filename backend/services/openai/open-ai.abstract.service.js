@@ -50,7 +50,7 @@ class BaseOpenAIService extends EventEmitter {
 
 
         } catch (error) {
-            console.error('Failed to initialize OpenAI:', error);
+            console.error('Failed to initialize OpenAI:');
             return false;
         }
     }

@@ -77,7 +77,7 @@ class BackgroundService extends EventEmitter {
             this.setupShutdownHandlers();
 
         } catch (error) {
-            console.error('Failed to start background service:', error);
+            console.error('Failed to start background service:');
             throw error;
         }
     }
@@ -123,7 +123,7 @@ class BackgroundService extends EventEmitter {
                 console.log('Background service stopped successfully');
                 process.exit(0);
             } catch (error) {
-                console.error('Error during shutdown:', error);
+                console.error('Error during shutdown:');
                 process.exit(1);
             }
         };
@@ -135,6 +135,6 @@ class BackgroundService extends EventEmitter {
 
 const backgroundService = new BackgroundService();
 backgroundService.start().catch(error => {
-    console.error('Fatal error during background service startup:', error);
+    console.error('Fatal error during background service startup:');
     process.exit(1);
 });

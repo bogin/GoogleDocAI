@@ -16,7 +16,7 @@ const connectToMongoDB = async () => {
         await FileContent.init();
         return true;
     } catch (error) {
-        console.error('Unable to connect to the mongo database:', error);
+        console.error('Unable to connect to the mongo database:');
         return false;
     } finally {
         process.on('SIGINT', async () => {

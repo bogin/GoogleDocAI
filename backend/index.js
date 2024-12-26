@@ -14,7 +14,7 @@ async function validateRedisConnection() {
     await redisClient.ping();
     return true;
   } catch (error) {
-    console.error('Redis connection error:', error);
+    console.error('Redis connection error:');
     return false;
   }
 }
@@ -87,6 +87,6 @@ process.on('SIGINT', () => {
 });
 
 startServer().catch(error => {
-  console.error('Fatal error during startup:', error);
+  console.error('Fatal error during startup:');
   process.exit(1);
 });

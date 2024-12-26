@@ -34,7 +34,7 @@ class ETLService extends BaseService {
 
             this.lastSyncTime = setting?.value?.time ? new Date(setting.value.time) : null;
         } catch (error) {
-            console.error('Error loading last sync time:', error);
+            console.error('Error loading last sync time:');
             this.lastSyncTime = null;
         }
     }
@@ -114,7 +114,7 @@ class ETLService extends BaseService {
 
             await this.updateLastSyncTime();
         } catch (error) {
-            console.error('Failed to check for new files:', error);
+            console.error('Failed to check for new files:');
         }
     }
 
@@ -159,7 +159,6 @@ class ETLService extends BaseService {
 
     async syncFiles(retryCount = 0) {
         if (this.isSyncing) {
-            console.log('Sync already in progress');
             return;
         }
 
@@ -187,7 +186,7 @@ class ETLService extends BaseService {
                 });
             }
         } catch (error) {
-            console.error('Sync process failed:', error);
+            console.error('Sync process failed:');
             if (retryCount < this.maxRetries) {
                 await new Promise(resolve => setTimeout(resolve, 5000));
                 return this.syncFiles(retryCount + 1);

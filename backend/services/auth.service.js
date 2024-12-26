@@ -14,7 +14,7 @@ class AuthService {
             await this.googleService.waitForInit();
             return this.googleService.getAuthUrl();
         } catch (error) {
-            console.error('Error getting Google auth URL:', error);
+            console.error('Error getting Google auth URL:');
             throw new Error(error.message || 'Failed to generate authentication URL');
         }
     }
@@ -31,14 +31,14 @@ class AuthService {
             await this.etlService.setAuth(auth);
             await this.smartQueue.setInitialized(true);
 
-            console.log('Successfully authenticated and initialized services');
+            console.log('AuthService: Successfully authenticated and initialized services');
 
             return {
                 success: true,
                 message: 'Authentication and initialization successful'
             };
         } catch (error) {
-            console.error('Error handling Google callback:', error);
+            console.error('Error handling Google callback:');
             return {
                 success: false,
                 error: error.message || 'Authentication process failed'
@@ -57,7 +57,7 @@ class AuthService {
                 valid: isValid
             };
         } catch (error) {
-            console.error('Token validation error:', error);
+            console.error('Token validation error:');
             return {
                 success: false,
                 error: error.message || 'Token validation failed'
@@ -85,7 +85,7 @@ class AuthService {
                 message: 'Access successfully revoked'
             };
         } catch (error) {
-            console.error('Access revocation error:', error);
+            console.error('Access revocation error:');
             return {
                 success: false,
                 error: error.message || 'Failed to revoke access'

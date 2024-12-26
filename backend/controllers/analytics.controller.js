@@ -12,7 +12,7 @@ class AnalyticsController {
 
             return res.json(result);
         } catch (error) {
-            console.error('Analytics controller error:', error);
+            console.error('Analytics controller error:');
             return res.status(500).json({
                 success: false,
                 error: 'Internal server error'

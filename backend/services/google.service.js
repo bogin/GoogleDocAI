@@ -40,7 +40,6 @@ class GoogleService extends BaseService {
         try {
             const settings = await systemSettingsService.get('google');
             if (!settings?.value) {
-                console.log('Waiting for Google settings...');
                 return false;
             }
 
@@ -73,7 +72,7 @@ class GoogleService extends BaseService {
             this.markInitialized();
             return true;
         } catch (error) {
-            console.error('Failed to initialize Google service:', error);
+            console.error('Failed to initialize Google service:');
             return false;
         }
     }
@@ -85,12 +84,10 @@ class GoogleService extends BaseService {
             if (loaded && this.auth.credentials) {
                 try {
                     await this.drive.files.list({ pageSize: 1 });
-                    console.log('Google Auth initialized successfully');
                     this.isAuthenticated = true;
                     this.emit('authenticated', this.auth);
                     return true;
                 } catch (apiError) {
-                    console.log('Stored credentials are invalid:', apiError.message);
                     await systemSettingsService.update('google_tokens', null);
                     this.isAuthenticated = false;
                     this.emit('authenticationFailed', apiError);
@@ -103,8 +100,8 @@ class GoogleService extends BaseService {
             this.emit('authenticationRequired');
             return false;
         } catch (error) {
-            console.error('Error verifying authentication:', error);
-            this.emit('authenticationFailed', error);
+            console.error('Error verifying authentication:');
+            this.emit('authenticationFailed');
             return false;
         }
     }
@@ -114,7 +111,7 @@ class GoogleService extends BaseService {
             const setting = await systemSettingsService.get('google_tokens');
             return setting?.value || null;
         } catch (error) {
-            console.error('Error loading tokens from settings:', error);
+            console.error('Error loading tokens from settings:');
             return null;
         }
     }
@@ -122,9 +119,8 @@ class GoogleService extends BaseService {
     async saveTokensToSettings(tokens) {
         try {
             await systemSettingsService.update('google_tokens', tokens);
-            console.log('Tokens saved to settings successfully');
         } catch (error) {
-            console.error('Error saving tokens to settings:', error);
+            console.error('Error saving tokens to settings:');
             throw error;
         }
     }
@@ -133,7 +129,6 @@ class GoogleService extends BaseService {
         try {
             const tokens = await this.loadTokensFromSettings();
             if (!tokens) {
-                console.log('No saved tokens found');
                 this.isAuthenticated = false;
                 return false;
             }
@@ -155,7 +150,6 @@ class GoogleService extends BaseService {
                     this.emit('authenticated', this.auth);
                     return true;
                 } catch (refreshError) {
-                    console.log('Failed to refresh tokens:', refreshError);
                     this.isAuthenticated = false;
                     return false;
                 }
@@ -166,7 +160,6 @@ class GoogleService extends BaseService {
                 return true;
             }
         } catch (error) {
-            console.log('Error loading saved tokens:', error);
             this.isAuthenticated = false;
             return false;
         }
@@ -195,7 +188,7 @@ class GoogleService extends BaseService {
 
             return mergedTokens;
         } catch (error) {
-            console.error('Error setting credentials:', error);
+            console.error('Error setting credentials:');
             this.isAuthenticated = false;
             throw error;
         }
@@ -225,7 +218,7 @@ class GoogleService extends BaseService {
 
             return response;
         } catch (error) {
-            console.error('Error getting file content:', error);
+            console.error('Error getting file content:');
             throw error;
         }
     }
@@ -268,7 +261,7 @@ class GoogleService extends BaseService {
                 hasMore: !!response.data.nextPageToken,
             };
         } catch (error) {
-            console.error('Error listing files:', error);
+            console.error('Error listing files:');
             throw error;
         }
     }
@@ -279,7 +272,7 @@ class GoogleService extends BaseService {
             const response = await this.drive.files.get({ fileId });
             return response.data;
         } catch (error) {
-            console.error('Error getting file:', error);
+            console.error('Error getting file:');
             throw error;
         }
     }

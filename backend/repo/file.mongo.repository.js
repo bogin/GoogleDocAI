@@ -14,7 +14,7 @@ class MongoFileRepository {
                 { upsert: true, new: true }
             );
         } catch (error) {
-            console.error('Error upserting file content:', error);
+            console.error('Error upserting file content:');
             throw error;
         }
     }
@@ -37,7 +37,7 @@ class MongoFileRepository {
                 { upsert: true, new: true }
             );
         } catch (error) {
-            console.error('Error upserting file content from response:', error);
+            console.error('Error upserting file content from response:');
             throw error;
         }
     }
@@ -46,7 +46,7 @@ class MongoFileRepository {
         try {
             return await FileContent.findOne({ fileId });
         } catch (error) {
-            console.error('Error finding file content:', error);
+            console.error('Error finding file content:');
             throw error;
         }
     }
@@ -75,7 +75,7 @@ class MongoFileRepository {
                 totalPages: Math.ceil(total / limit),
             };
         } catch (error) {
-            console.error('Error searching file content:', error);
+            console.error('Error searching file content:');
             throw error;
         }
     }
@@ -85,7 +85,7 @@ class MongoFileRepository {
             const pipeline = await mongoFileOpenAIService.generatePipeline({ query });
             return await FileContent.aggregate(pipeline).toArray();
         } catch (error) {
-            console.error('Error fetching search results:', error);
+            console.error('Error fetching search results:');
             throw error;
         }
     }
@@ -98,7 +98,7 @@ class MongoFileRepository {
 
             return results;
         } catch (error) {
-            console.error('Error in aggregate search:', error);
+            console.error('Error in aggregate search:');
             throw error;
         }
     }
@@ -107,7 +107,7 @@ class MongoFileRepository {
         try {
             return await FileContent.findOneAndDelete({ fileId });
         } catch (error) {
-            console.error('Error deleting file content:', error);
+            console.error('Error deleting file content:');
             throw error;
         }
     }
@@ -125,7 +125,7 @@ class MongoFileRepository {
                 },
             ]);
         } catch (error) {
-            console.error('Error getting content stats:', error);
+            console.error('Error getting content stats:');
             throw error;
         }
     }

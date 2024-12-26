@@ -113,7 +113,7 @@ class MongoFileOpenAIService extends BaseOpenAIService {
 
       return cleaned;
     } catch (error) {
-      console.error('Pipeline parsing error:', error);
+      console.error('Pipeline parsing error:');
       return null;
     }
   }

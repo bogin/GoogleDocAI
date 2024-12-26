@@ -66,7 +66,7 @@ async function setupDatabase() {
         await dbClient.end();
 
     } catch (error) {
-        console.error('Setup error:', error.message);
+        console.error('Setup error:');
         throw error;
     } finally {
         try {

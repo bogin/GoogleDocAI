@@ -10,14 +10,6 @@ const redisConfig = {
 
 const redisClient = new Redis(redisConfig);
 
-redisClient.on('error', (err) => {
-    console.error('Redis Client Error:', err);
-});
-
-redisClient.on('connect', () => {
-    console.log('Redis Client Connected');
-});
-
 module.exports = {
     redisClient,
     redisConfig

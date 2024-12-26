@@ -6,7 +6,7 @@ class AuthController {
             const authUrl = await authService.getGoogleAuthUrl();
             res.redirect(authUrl);
         } catch (error) {
-            console.error('Google auth initiation error:', error);
+            console.error('Google auth initiation error:');
             res.status(500).json({
                 error: 'Authentication service unavailable'
             });
@@ -24,7 +24,7 @@ class AuthController {
 
             res.send('Authentication successful! You can close this window.');
         } catch (error) {
-            console.error('Auth callback error:', error);
+            console.error('Auth callback error:');
             res.status(500).json({
                 error: 'Authentication failed'
             });

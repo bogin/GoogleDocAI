@@ -76,7 +76,7 @@ class SyncQueue extends BaseService {
 
             this.lastCheckTime = new Date();
         } catch (error) {
-            console.error('Error checking for changes:', error);
+            console.error('Error checking for changes:');
         }
     }
 
@@ -88,7 +88,7 @@ class SyncQueue extends BaseService {
             const task = this.queue.shift();
             await this.processTask(task);
         } catch (error) {
-            console.error('Error processing task:', error);
+            console.error('Error processing task:');
         } finally {
             this.isProcessing = false;
             if (this.queue.length > 0) {

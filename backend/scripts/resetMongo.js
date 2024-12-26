@@ -15,7 +15,7 @@ const resetMongoDB = async () => {
 
         process.exit(0);
     } catch (error) {
-        console.error('Error resetting MongoDB database:', error);
+        console.error('Error resetting MongoDB database:');
         process.exit(1);
     }
 };

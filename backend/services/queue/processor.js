@@ -12,7 +12,7 @@ class FileProcessorService {
             const upserted = await mongoFileRepository.upsertFileFromResponse(response);
             return upserted;
         } catch (error) {
-            console.error('Error getting file content:', error);
+            console.error('Error getting file content:');
             throw error;
         }
     }
@@ -94,7 +94,7 @@ class FileProcessorService {
             await userRepository.updateStats(user.id);
             return user;
         } catch (error) {
-            console.error('Error processing owner:', error);
+            console.error('Error processing owner:');
             return null;
         }
     }
@@ -104,7 +104,7 @@ class FileProcessorService {
             const users = await userRepository.findByIds(Array.from(userIds));
             await Promise.all(users.map(user => userRepository.updateStats(user.id)));
         } catch (error) {
-            console.error('Error updating user stats:', error);
+            console.error('Error updating user stats:');
         }
     }
 
