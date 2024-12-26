@@ -20,15 +20,6 @@
         </a>
 
         <router-link
-          :to="{ name: 'home' }"
-          class="nav-link"
-          active-class="active"
-        >
-          <i class="nav-icon">🏠</i>
-          <span>Home</span>
-        </router-link>
-
-        <router-link
           :to="{ name: 'analytics' }"
           class="nav-link"
           active-class="active"

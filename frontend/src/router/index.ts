@@ -1,15 +1,9 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router'
-import HomeView from '../views/HomeView.vue'
 import FilesView from '../views/FilesView.vue'
 import AnalyticsView from '../views/AnalyticsView.vue'
 import SystemSettingsView from '../views/SystemSettings.vue'
 
 const routes: Array<RouteRecordRaw> = [
-  {
-    path: '/',
-    name: 'home',
-    component: HomeView,
-  },
   {
     path: '/files',
     name: 'files',
