@@ -1,23 +1,31 @@
 <template>
   <div class="table-wrapper">
-    <table class="data-table">
-      <TableHeader :columns="visibleColumns" />
-      <TableBody
-        :rows="rows"
-        :visible-columns="visibleColumns"
-        @edit="$emit('edit', $event)"
-        @delete="$emit('delete', $event)"
-        @copy="$emit('copy', $event)"
-        @action="$emit('action', $event)"
-        @view="$emit('view', $event)"
+    <div class="table-header-container">
+      <table class="data-table">
+        <TableHeader :columns="visibleColumns" />
+      </table>
+    </div>
+    <div class="table-body-container">
+      <table class="data-table">
+        <TableBody
+          :rows="rows"
+          :visible-columns="visibleColumns"
+          @edit="$emit('edit', $event)"
+          @delete="$emit('delete', $event)"
+          @copy="$emit('copy', $event)"
+          @action="$emit('action', $event)"
+          @view="$emit('view', $event)"
+        />
+      </table>
+    </div>
+    <div class="table-footer-container">
+      <TablePagination
+        :pagination="pagination"
+        :page-size="pageSize"
+        @page-change="handlePageChange"
+        @size-change="handleSizeChange"
       />
-    </table>
-    <TablePagination
-      :pagination="pagination"
-      :page-size="pageSize"
-      @page-change="handlePageChange"
-      @size-change="handleSizeChange"
-    />
+    </div>
   </div>
 </template>
 
@@ -87,28 +95,31 @@ export default defineComponent({
 </script>
 
 <style lang="scss" scoped>
-.table-container {
+.table-wrapper {
   width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   background: white;
   border-radius: 8px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.table-wrapper {
-  width: 100%;
+.table-header-container {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: white;
+}
+
+.table-body-container {
+  flex: 1;
+  overflow-y: auto;
   overflow-x: auto;
-
-  .data-table {
-    margin-bottom: 1rem;
-  }
-
-  .pagination-container {
-    display: flex;
-    justify-content: flex-end;
-    padding: 1rem;
-  }
+  min-height: 0;
 
   &::-webkit-scrollbar {
+    width: 8px;
     height: 8px;
   }
 
@@ -126,9 +137,17 @@ export default defineComponent({
   }
 }
 
+.table-footer-container {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  background: white;
+}
+
 .data-table {
   width: 100%;
   border-collapse: collapse;
   white-space: nowrap;
+  table-layout: fixed;
 }
 </style>

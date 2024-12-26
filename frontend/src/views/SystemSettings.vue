@@ -1,6 +1,5 @@
 <template>
   <div class="settings-view">
-    <!-- Header section remains the same -->
     <header class="settings-header">
       <h1>System Settings</h1>
       <p class="description">
@@ -24,7 +23,6 @@
     </div>
 
     <div v-else class="settings-grid">
-      <!-- OpenAI Settings Card -->
       <div class="settings-card">
         <div class="card-header">
           <h2>OpenAI Integration</h2>
@@ -54,7 +52,6 @@
         </div>
       </div>
 
-      <!-- Google Settings Card -->
       <div class="settings-card">
         <div class="card-header">
           <h2>Google Integration</h2>
@@ -86,7 +83,6 @@
       </div>
     </div>
 
-    <!-- Forms remain the same -->
     <DynamicForm
       v-if="showOpenAIForm"
       :show="showOpenAIForm"

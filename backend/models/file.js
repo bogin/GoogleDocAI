@@ -13,13 +13,13 @@ module.exports = (sequelize) => {
         async safeDelete(userId) {
             await sequelize.models.FileOwner.destroy({
                 where: {
-                    file_id: this.id,  // Changed from fileId to match DB column
-                    user_id: userId    // Changed from userId to match DB column
+                    file_id: this.id,
+                    user_id: userId
                 }
             });
 
             const remainingOwners = await sequelize.models.FileOwner.count({
-                where: { file_id: this.id }  // Changed from fileId to match DB column
+                where: { file_id: this.id }
             });
 
             if (remainingOwners === 0) {

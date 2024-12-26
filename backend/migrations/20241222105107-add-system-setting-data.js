@@ -11,15 +11,6 @@ module.exports = {
         }),
         updated_at: new Date()
       },
-     /* {
-        key: 'google',
-        value: JSON.stringify({
-          clientId: '939872405402-1me7uv98gtnmge9tsuqleth134c81m30.apps.googleusercontent.com',
-          clientSecret: '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',
-          redirectUri: 'http://localhost:3000/auth/google/callback'
-        }),
-        updated_at: new Date()
-      }*/
     ]);
   },
 

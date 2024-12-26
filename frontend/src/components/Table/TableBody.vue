@@ -43,12 +43,18 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 tbody {
+  height: 100%;
+
   tr {
     border-bottom: 1px solid #e2e8f0;
     transition: background-color 0.2s;
 
     &:hover {
       background-color: #f7fafc;
+    }
+
+    &:last-child {
+      border-bottom: none;
     }
   }
 }

@@ -90,7 +90,7 @@ class MongoFileOpenAIService extends BaseOpenAIService {
           });
         }
 
-        // await cacheService.set(cacheKey, cleanedQuery);
+        await cacheService.set(cacheKey, cleanedQuery);
       } else {
         throw new Error(cleanedQuery)
       }

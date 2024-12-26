@@ -231,17 +231,18 @@ export default defineComponent({
 
 .table-container {
   position: relative;
-  min-height: 30vh;
-  max-height: 66vh;
+  max-height: calc(100vh - 300px);
   background: white;
   border-radius: 12px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .table-scroll-container {
-  height: 100%;
-  overflow: auto;
+  position: relative;
+  flex: 1;
+  min-height: 0;
 
   &::-webkit-scrollbar {
     width: 8px;
