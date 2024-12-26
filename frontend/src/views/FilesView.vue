@@ -114,7 +114,7 @@ export default defineComponent({
         await store.dispatch('files/deleteFile', fileId)
         fetchFiles()
       } catch (error) {
-        console.error('Failed to delete file:', error)
+        console.error('Failed to delete file:')
       }
     }
 
@@ -129,7 +129,7 @@ export default defineComponent({
         await store.dispatch('files/updateFile', { fileId, data })
         fetchFiles()
       } catch (error) {
-        console.error('Failed to update file:', error)
+        console.error('Failed to update file:')
       }
     }
 

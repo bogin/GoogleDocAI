@@ -174,7 +174,7 @@ export default defineComponent({
         })
         showOpenAIForm.value = false
       } catch (error) {
-        console.error('Failed to update OpenAI settings:', error)
+        console.error('Failed to update OpenAI settings:')
       }
     }
 
@@ -188,7 +188,7 @@ export default defineComponent({
         })
         showOpenAIForm.value = false
       } catch (error) {
-        console.error('Failed to update OpenAI settings:', error)
+        console.error('Failed to update OpenAI settings:')
       }
     }
 
@@ -202,7 +202,7 @@ export default defineComponent({
         })
         showGoogleForm.value = false
       } catch (error) {
-        console.error('Failed to create Google settings:', error)
+        console.error('Failed to create Google settings:')
       }
     }
 
@@ -216,7 +216,7 @@ export default defineComponent({
         })
         showGoogleForm.value = false
       } catch (error) {
-        console.error('Failed to update Google settings:', error)
+        console.error('Failed to update Google settings:')
       }
     }
 

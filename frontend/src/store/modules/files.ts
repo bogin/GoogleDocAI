@@ -76,7 +76,6 @@ const files: Module<FilesState, RootState> = {
         })
 
         if (response.data.error) {
-          console.log(response.data.error)
           commit('SET_ERROR', response.data.error)
           commit('SET_LOADING', false)
           return
@@ -122,7 +121,7 @@ const files: Module<FilesState, RootState> = {
         await axios.delete(`/files/${fileId}`)
         return dispatch('fetchFiles', { page: 1 })
       } catch (error) {
-        console.error('Failed to delete file:', error)
+        console.error('Failed to delete file:')
         throw error
       }
     },
@@ -135,7 +134,7 @@ const files: Module<FilesState, RootState> = {
         await axios.put(`/files/${fileId}`, data)
         return dispatch('fetchFiles', { page: 1 })
       } catch (error) {
-        console.error('Failed to update file:', error)
+        console.error('Failed to update file:')
         throw error
       }
     },

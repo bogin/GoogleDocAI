@@ -150,7 +150,7 @@ export default defineComponent({
         }
         closeModal()
       } catch (error) {
-        console.error('Form submission error:', error)
+        console.error('Form submission error:')
       } finally {
         isSubmitting.value = false
       }

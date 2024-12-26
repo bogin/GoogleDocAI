@@ -113,7 +113,6 @@ export default defineComponent({
     })
 
     const handleSearch = async (query: string): Promise<void> => {
-      console.log('!!!')
       if (!query.trim()) {
         store.dispatch('analytics/clearResults')
         return
@@ -122,7 +121,7 @@ export default defineComponent({
       try {
         await store.dispatch('analytics/analyzeFiles', query)
       } catch (error) {
-        console.error('Search failed:', error)
+        console.error('Search failed:')
       }
     }
 

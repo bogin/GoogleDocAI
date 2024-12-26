@@ -66,7 +66,6 @@ export const defaultColumns: Column[] = [
     key: 'name',
     label: 'Name',
     visible: true,
-
     width: '200px',
   },
   {

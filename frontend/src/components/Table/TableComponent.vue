@@ -9,6 +9,7 @@
         @delete="$emit('delete', $event)"
         @copy="$emit('copy', $event)"
         @action="$emit('action', $event)"
+        @view="$emit('view', $event)"
       />
     </table>
     <TablePagination
@@ -59,7 +60,15 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['edit', 'delete', 'action', 'copy', 'page-change', 'size-change'],
+  emits: [
+    'edit',
+    'delete',
+    'action',
+    'copy',
+    'page-change',
+    'size-change',
+    'view',
+  ],
   setup(props, { emit }) {
     const handlePageChange = (page: number) => {
       emit('page-change', page)

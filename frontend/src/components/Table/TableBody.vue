@@ -10,6 +10,7 @@
         @edit="$emit('edit', row)"
         @delete="$emit('delete', row.id)"
         @copy="$emit('copy', row)"
+        @view="$emit('view', row)"
         @action="$emit('action', { row, column })"
       />
     </tr>
@@ -36,7 +37,7 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['edit', 'delete', 'action', 'copy'],
+  emits: ['edit', 'delete', 'view', 'action', 'copy'],
 })
 </script>
 

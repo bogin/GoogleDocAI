@@ -7,7 +7,7 @@
           :key="action.type"
           class="btn"
           :classes="`btn-${action.type}`"
-          @click="$emit(action.type as any)"
+          @click="handleAction(action.type, $event)"
           :icon="action.icon"
         ></AppButton>
       </div>
@@ -42,11 +42,12 @@ export default defineComponent({
       default: '',
     },
   },
-  setup(props) {
+  setup(props, { emit }) {
     const defaultActions = [
       { type: 'copy', icon: 'copy', title: 'Copy' },
       { type: 'edit', icon: 'edit', title: 'Edit' },
       { type: 'delete', icon: 'delete', title: 'Delete' },
+      { type: 'view', icon: 'view', title: 'View File' },
     ]
 
     const formatValue = computed(() => {
@@ -63,12 +64,35 @@ export default defineComponent({
         : value
     })
 
+    const handleAction = (type: string, event: Event) => {
+      event.stopPropagation()
+      switch (type) {
+        case 'copy': {
+          emit('copy', props.row)
+          break
+        }
+        case 'edit': {
+          emit('edit', props.row)
+          break
+        }
+        case 'delete': {
+          emit('delete', props.row)
+          break
+        }
+        case 'view': {
+          emit('view', props.row)
+          break
+        }
+      }
+    }
+
     return {
       formatValue,
       defaultActions,
+      handleAction,
     }
   },
-  emits: ['edit', 'delete', 'action'],
+  emits: ['edit', 'delete', 'copy', 'view'],
 })
 </script>
 

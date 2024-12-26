@@ -90,7 +90,6 @@ export default defineComponent({
         !toggleButton.value?.contains(event.target as Node) &&
         !dropdown.value?.contains(event.target as Node)
       ) {
-        console.log('????', toggleButton.value)
         showDropdown.value = false
       }
     }
@@ -119,7 +118,6 @@ export default defineComponent({
 
     const showDropdownModel = () => {
       showDropdown.value = !showDropdown.value
-      console.log('!!!!!!!!!!!!!!!!!!', showDropdown.value)
     }
 
     return {

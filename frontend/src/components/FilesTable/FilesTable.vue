@@ -17,6 +17,7 @@
           @edit="handleEdit"
           @delete="handleDelete"
           @copy="copyLink"
+          @view="openLink"
           @page-change="$emit('page-change', $event)"
           @size-change="$emit('size-change', $event)"
         />
@@ -138,16 +139,6 @@ export default defineComponent({
       columns.value = newColumns
     }
 
-    const formatValue = (file: File, column: Column) => {
-      if (column.key === 'actions') return ''
-
-      const value = column.key.includes('.')
-        ? column.key.split('.').reduce((obj: any, key) => obj?.[key], file)
-        : (file as any)[column.key]
-
-      return column.formatter ? column.formatter(value, file) : value
-    }
-
     const handleDelete = (fileId: string) => {
       deletingFileId.value = fileId
       showDeleteModal.value = true
@@ -168,7 +159,6 @@ export default defineComponent({
 
     const copyLink = async (file: File) => {
       try {
-        console.log(file)
         await navigator.clipboard.writeText(`${file.webViewLink}`)
         toastMessage.value = 'Link copied to clipboard!'
         toastType.value = 'success'
@@ -197,6 +187,10 @@ export default defineComponent({
       editingFile.value = null
     }
 
+    const openLink = (file: File) => {
+      window.open(file.webViewLink, '_blank')
+    }
+
     return {
       showToast,
       toastMessage,
@@ -210,11 +204,11 @@ export default defineComponent({
       handleEdit,
       handleFormSubmit,
       copyLink,
+      openLink,
       handleDelete,
       confirmDelete,
       cancelDelete,
       updateColumns,
-      formatValue,
     }
   },
 })
