@@ -3,7 +3,6 @@ const validateDatabaseConnection = require('./db/postgres.db.connection');
 const googleService = require('./services/google.service');
 const etlService = require('./services/etl.service');
 const syncQueue = require('./services/queue');
-const fileProcessor = require('./services/queue/processor');
 const EventEmitter = require('events');
 const { connectToMongoDB } = require('./db/mongo.connection');
 
@@ -45,8 +44,6 @@ class BackgroundService extends EventEmitter {
                 throw new Error('Postgres Database connection failed');
             }
             console.log('Postgres Database connected successfully');
-
-            syncQueue.setProcessor(fileProcessor);
 
             console.log('Waiting for Google settings...');
             await this.waitForGoogleSettings();

@@ -2,6 +2,7 @@ const { Op } = require('sequelize');
 const BaseService = require('../base.service');
 const googleService = require('../google.service');
 const filesRepository = require('../../repo/files.repository');
+const fileProcessor = require('../queue/processor');
 
 class SyncQueue extends BaseService {
     constructor() {
@@ -9,7 +10,7 @@ class SyncQueue extends BaseService {
         this.addDependency(googleService);
         this.queue = [];
         this.isProcessing = false;
-        this.taskProcessor = null;
+        this.taskProcessor = fileProcessor;
     }
 
     async initialize() {
@@ -98,13 +99,7 @@ class SyncQueue extends BaseService {
     }
 
     async processTask(task) {
-        if (this.processor) {
-            await this.processor.processFiles(task);
-        }
-    }
-
-    setProcessor(processor) {
-        this.processor = processor;
+        await this.taskProcessor.processFiles(task);
     }
 }
 
